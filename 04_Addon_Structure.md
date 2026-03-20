@@ -829,9 +829,9 @@ The `C_AddOnProfiler` namespace provides performance metrics for addon debugging
 
 ### Enabling Profiling
 
-Addon profiling must be enabled via:
-1. `/console scriptProfile 1` (requires UI reload)
-2. Or enable in Interface Options > AddOns > Addon CPU Usage
+In **12.0.0+**, `C_AddOnProfiler` is always enabled -- no CVar or UI toggle is needed. The functions below work out of the box.
+
+In **pre-12.0.0** clients, the legacy `GetAddOnCPUUsage()` / `UpdateAddOnCPUUsage()` functions required `/console scriptProfile 1` (plus a UI reload) to activate. Those legacy functions were removed in 12.0.0; use `C_AddOnProfiler.GetAddOnMetric()` instead.
 
 ### Profiler Functions
 

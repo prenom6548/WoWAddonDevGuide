@@ -649,32 +649,35 @@ end
 -- Note: table.create() only helps with array parts, not hash parts
 ```
 
-### Addon Profiling (11.1.7+)
+### Addon Profiling
 
 ```lua
--- Use C_AddOnProfiler for accurate performance measurement
+-- Manual timing with debugprofilestop() (always available, no CVar needed)
 local function ProfileExpensiveOperation()
-    local startTime = C_AddOnProfiler.GetCurrentTime();
+    local startTime = debugprofilestop();  -- Returns elapsed ms since UI load
 
     -- Your code here
     DoExpensiveWork();
 
-    local endTime = C_AddOnProfiler.GetCurrentTime();
-    local elapsed = endTime - startTime;
-    print(format("Operation took %.3f ms", elapsed * 1000));
+    local elapsed = debugprofilestop() - startTime;
+    -- elapsed is in milliseconds (fractional)
 end
 
--- Measure specific function calls
-local result, duration = C_AddOnProfiler.MeasureCall(function()
-    return DoSomethingExpensive();
-end);
-print(format("Function returned %s in %.3f ms", tostring(result), duration * 1000));
+-- Measure a specific function call via C_AddOnProfiler (11.1.7+)
+-- Returns elapsed time in seconds
+local elapsed = C_AddOnProfiler.MeasureCall(DoSomethingExpensive, arg1, arg2);
 
--- Get addon memory usage
-local memoryKB = C_AddOnProfiler.GetAddOnMemoryUsage("MyAddon");
-print(format("Memory usage: %.2f KB", memoryKB));
+-- Query per-addon metrics from C_AddOnProfiler (always enabled in 12.0.0+)
+local recentAvg = C_AddOnProfiler.GetAddOnMetric(
+    "MyAddon", Enum.AddOnProfilerMetric.RecentAverageTime
+);
+local peakTime = C_AddOnProfiler.GetAddOnMetric(
+    "MyAddon", Enum.AddOnProfilerMetric.PeakTime
+);
 
--- Profile info available in the addon profiler UI (/console enableAddOnCPUProfiling 1)
+-- Memory profiling uses legacy globals (still work in 12.0.0+)
+UpdateAddOnMemoryUsage();  -- Must call first to refresh data
+local memoryKB = GetAddOnMemoryUsage("MyAddon");
 ```
 
 ### Avoid OnUpdate When Possible

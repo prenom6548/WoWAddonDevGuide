@@ -622,10 +622,14 @@ end
 
 ### Built-In CPU Profiling
 
+> **REMOVED in 12.0.0:** The functions below (`GetFunctionCPUUsage`, `UpdateAddOnCPUUsage`, `GetAddOnCPUUsage`) and the `scriptProfile` CVar were removed. Use the `C_AddOnProfiler` API instead (see [Addon Profiling API](#addon-profiling-api-1107) below). Profiling is always enabled in 12.0.0+ — no CVar needed.
+
+#### Pre-12.0.0 Legacy Reference
+
 **Source:** `ArkInventory/Core/ArkInventoryCPU.lua`
 
 ```lua
--- Enable CPU profiling
+-- Enable CPU profiling (REMOVED in 12.0.0)
 /run SetCVar("scriptProfile", "1");
 ReloadUI();
 
@@ -701,7 +705,9 @@ print(string.format("Operation took %.2fms", elapsed));
 
 ### Overview
 
-Starting with 11.0.7, WoW provides a dedicated `C_AddOnProfiler` API for measuring addon performance. This replaced older methods and provides more accurate metrics.
+Starting with 11.0.7, WoW provides a dedicated `C_AddOnProfiler` API for measuring addon performance. In **12.0.0**, the older profiling functions (`GetFunctionCPUUsage`, `UpdateAddOnCPUUsage`, `GetAddOnCPUUsage`) and the `scriptProfile` CVar were **removed entirely**. `C_AddOnProfiler` is now the only supported approach.
+
+> **12.0.0+:** Addon profiling is **always enabled** — no CVar or opt-in is needed. The profiler runs automatically for all loaded addons.
 
 ### Getting Addon Metrics
 
@@ -712,16 +718,21 @@ local avgTime = C_AddOnProfiler.GetAddOnMetric(
     Enum.AddOnProfilerMetric.SessionAverageTime
 )
 
--- Available metrics (Enum.AddOnProfilerMetric)
-Enum.AddOnProfilerMetric.SessionAverageTime     -- Average over entire session
-Enum.AddOnProfilerMetric.RecentAverageTime      -- Average over recent samples
-Enum.AddOnProfilerMetric.EncounterAverageTime   -- Average during encounters
-Enum.AddOnProfilerMetric.LastTime               -- Most recent frame time
-Enum.AddOnProfilerMetric.PeakTime               -- Peak time recorded
-Enum.AddOnProfilerMetric.CountTimeOver1Ms       -- Frames taking >1ms
-Enum.AddOnProfilerMetric.CountTimeOver5Ms       -- Frames taking >5ms
-Enum.AddOnProfilerMetric.CountTimeOver10Ms      -- Frames taking >10ms
-Enum.AddOnProfilerMetric.CountTimeOver50Ms      -- Frames taking >50ms
+-- All available metrics (Enum.AddOnProfilerMetric):
+--   Time metrics (values in milliseconds):
+Enum.AddOnProfilerMetric.SessionAverageTime     -- (0) Average over entire session
+Enum.AddOnProfilerMetric.RecentAverageTime      -- (1) Average over recent samples
+Enum.AddOnProfilerMetric.EncounterAverageTime   -- (2) Average during encounters
+Enum.AddOnProfilerMetric.LastTime               -- (3) Most recent frame time
+Enum.AddOnProfilerMetric.PeakTime               -- (4) Peak time recorded
+--   Spike counters (number of frames exceeding threshold):
+Enum.AddOnProfilerMetric.CountTimeOver1Ms       -- (5)  Frames taking >1ms
+Enum.AddOnProfilerMetric.CountTimeOver5Ms       -- (6)  Frames taking >5ms
+Enum.AddOnProfilerMetric.CountTimeOver10Ms      -- (7)  Frames taking >10ms
+Enum.AddOnProfilerMetric.CountTimeOver50Ms      -- (8)  Frames taking >50ms
+Enum.AddOnProfilerMetric.CountTimeOver100Ms     -- (9)  Frames taking >100ms
+Enum.AddOnProfilerMetric.CountTimeOver500Ms     -- (10) Frames taking >500ms
+Enum.AddOnProfilerMetric.CountTimeOver1000Ms    -- (11) Frames taking >1000ms
 ```
 
 ### Profiling Specific Functions (11.1.7+)
@@ -822,6 +833,136 @@ function PrintAddonPerformance()
         if i >= 10 then break end  -- Top 10
     end
 end
+```
+
+### Performance Anti-Patterns
+
+Common mistakes that cause performance problems in WoW addons.
+
+#### 1. Per-Frame Tooltip Rebuilds via UpdateTooltip
+
+Setting `button.UpdateTooltip` causes `GameTooltip_OnUpdate` to call it **every frame** while the tooltip is visible. Only build tooltips once on `OnEnter`.
+
+```lua
+-- BAD: Rebuilds tooltip every frame
+button:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("My Button")
+    GameTooltip:Show()
+    self.UpdateTooltip = self:GetScript("OnEnter")  -- Called every frame!
+end)
+
+-- GOOD: Build once, no UpdateTooltip
+button:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("My Button")
+    GameTooltip:Show()
+end)
+button:SetScript("OnLeave", GameTooltip_Hide)
+```
+
+#### 2. Event Handlers Triggering Full Rebuilds Without Throttling
+
+Events like `QUEST_LOG_UPDATE` or `GET_ITEM_INFO_RECEIVED` can fire dozens of times in rapid bursts. Rebuilding UI on every firing wastes CPU.
+
+```lua
+-- BAD: Full rebuild on every event
+frame:RegisterEvent("QUEST_LOG_UPDATE")
+frame:SetScript("OnEvent", function(self, event)
+    self:RebuildEntireQuestList()  -- May fire 20+ times in a burst
+end)
+
+-- GOOD: Coalesce with dirty flag + timer
+local dirty = false
+frame:RegisterEvent("QUEST_LOG_UPDATE")
+frame:SetScript("OnEvent", function(self, event)
+    if not dirty then
+        dirty = true
+        C_Timer.After(0, function()
+            dirty = false
+            self:RebuildEntireQuestList()  -- Runs once after the burst
+        end)
+    end
+end)
+```
+
+#### 3. Table Allocations in Hot Loops
+
+Creating new tables (`{}`) inside frequently-called functions generates garbage collection pressure.
+
+```lua
+-- BAD: New table every call
+function MyAddon:GetVisibleUnits()
+    local units = {}  -- Allocated every call, GC must clean up
+    for i = 1, 40 do
+        local unit = "nameplate" .. i
+        if UnitExists(unit) then
+            table.insert(units, unit)
+        end
+    end
+    return units
+end
+
+-- GOOD: Reuse a persistent table
+local visibleUnits = {}
+function MyAddon:GetVisibleUnits()
+    wipe(visibleUnits)
+    for i = 1, 40 do
+        local unit = "nameplate" .. i
+        if UnitExists(unit) then
+            table.insert(visibleUnits, unit)
+        end
+    end
+    return visibleUnits
+end
+```
+
+#### 4. Deep Nested Table Lookups in Loops
+
+Repeating multi-level table accesses inside a loop wastes time on redundant lookups.
+
+```lua
+-- BAD: 3-level lookup repeated per iteration
+for _, questID in ipairs(questList) do
+    local reward = data[expansion][mapId].rewards[questID]  -- 3 lookups * N iterations
+    ProcessReward(reward)
+end
+
+-- GOOD: Cache the intermediate table
+local mapRewards = data[expansion][mapId].rewards
+for _, questID in ipairs(questList) do
+    local reward = mapRewards[questID]  -- 1 lookup per iteration
+    ProcessReward(reward)
+end
+```
+
+#### 5. API Calls That Trigger Events Creating Feedback Loops
+
+Some quest log API calls (`GetQuestLogRewardInfo`, `GetQuestObjectiveInfo`) can trigger `QUEST_LOG_UPDATE`. If your handler for that event calls those same APIs, you get an infinite loop that freezes the client.
+
+```lua
+-- BAD: Infinite loop — handler calls APIs that re-fire the event
+frame:RegisterEvent("QUEST_LOG_UPDATE")
+frame:SetScript("OnEvent", function(self, event)
+    for i = 1, C_QuestLog.GetNumQuestLogEntries() do
+        -- These calls can trigger another QUEST_LOG_UPDATE
+        local info = C_QuestLog.GetQuestRewardInfoByQuestID(questID)
+    end
+end)
+
+-- GOOD: Throttle so re-entrant firings are ignored
+local isProcessing = false
+frame:RegisterEvent("QUEST_LOG_UPDATE")
+frame:SetScript("OnEvent", function(self, event)
+    if isProcessing then return end
+    isProcessing = true
+    C_Timer.After(0, function()
+        for i = 1, C_QuestLog.GetNumQuestLogEntries() do
+            local info = C_QuestLog.GetQuestRewardInfoByQuestID(questID)
+        end
+        isProcessing = false
+    end)
+end)
 ```
 
 ---

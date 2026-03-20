@@ -1522,6 +1522,12 @@ local inProgress = C_InstanceEncounter.IsEncounterInProgress()
 C_InstanceEncounter.GetCurrentEncounterInfo()
 ```
 
+**Profiling Functions (Use C_AddOnProfiler):**
+- `GetFunctionCPUUsage(func, includeSubFuncs)` → Use `C_AddOnProfiler.MeasureCall(func, ...)`
+- `UpdateAddOnCPUUsage()` → No longer needed; C_AddOnProfiler is always enabled in 12.0.0+
+- `GetAddOnCPUUsage(addon)` → Use `C_AddOnProfiler.GetAddOnMetric(addon, Enum.AddOnProfilerMetric.RecentAverageTime)`
+- `SetCVar("scriptProfile", "1")` → No longer needed; profiling is always active
+
 #### Patch 12.0.0 (TOC 120000)
 
 Minor refinements to 12.0.0 systems:
@@ -1694,12 +1700,12 @@ C_ChatInfo.IsAddonMessagePrefixRegistered(prefix)
 
 **New C_AddOnProfiler Namespace:**
 ```lua
--- Enable addon profiling (development tool)
-C_AddOnProfiler.EnableProfiling(addonName)
-C_AddOnProfiler.DisableProfiling(addonName)
-C_AddOnProfiler.GetAddOnMetric(addonName, metric)
-C_AddOnProfiler.ResetAddOnMetrics(addonName)
--- Metrics: "Time", "Calls", "Allocs", etc.
+-- Addon profiling (always enabled in 12.0.0+)
+C_AddOnProfiler.IsEnabled()                          -- Returns true (always enabled in 12.0.0+)
+C_AddOnProfiler.GetAddOnMetric(addon, metric)        -- Get per-addon metric (Enum.AddOnProfilerMetric)
+C_AddOnProfiler.GetOverallMetric(metric)             -- Get overall metric across all addons
+C_AddOnProfiler.GetTopKAddOnsForMetric(metric, k)    -- Get top K addons for a given metric
+C_AddOnProfiler.MeasureCall(func, ...)               -- Profile a single function call (11.1.7+)
 ```
 
 **New C_AccountStore Namespace:**
@@ -3064,6 +3070,9 @@ This is intentional. C_DamageMeter exists for Blizzard's OWN built-in UI, not fo
 | `BNSendGameData(...)` | `C_BattleNet.SendGameData(...)` | 12.0.0 | Namespace move |
 | `IsEncounterInProgress()` | `C_InstanceEncounter.IsEncounterInProgress()` | 12.0.0 | Namespace move |
 | `GetDeathRecapEvents()` | `C_DeathRecap.GetDeathRecapEvents()` | 12.0.0 | Namespace move |
+| `GetFunctionCPUUsage(func)` | `C_AddOnProfiler.MeasureCall(func, ...)` | 12.0.0 | Removed; profiler always enabled |
+| `UpdateAddOnCPUUsage()` | *(removed, not needed)* | 12.0.0 | C_AddOnProfiler auto-tracks |
+| `GetAddOnCPUUsage(addon)` | `C_AddOnProfiler.GetAddOnMetric(addon, metric)` | 12.0.0 | Use Enum.AddOnProfilerMetric |
 
 ---
 
