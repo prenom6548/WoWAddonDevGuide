@@ -206,7 +206,7 @@ WoW_Addon_Dev_Knowledge_Base/
 ├── 08_Community_Addon_Patterns.md ⭐
 ├── 09_Addon_Libraries_Guide.md ⭐
 ├── 10_Advanced_Techniques.md ⭐
-├── 11_Housing_System_Guide.md ⭐ NEW!
+├── 11_Housing_System_Guide.md ⭐
 └── 12_API_Migration_Guide.md ⭐
 ```
 <!-- CLAUDE_SKIP_END -->
@@ -266,12 +266,12 @@ print("Debug:", value)
 <!-- CLAUDE_SKIP_START -->
 ### WoW UI Source (for reference)
 ```
-D:\Games\World of Warcraft\_retail_\Interface\+wow-ui-source+ (11.2.7)\
+https://github.com/Gethe/wow-ui-source
 ```
 
 ### Your Addons
 ```
-D:\Games\World of Warcraft\_retail_\Interface\AddOns\
+...\World of Warcraft\_retail_\Interface\AddOns\
 ```
 
 ### Saved Variables
@@ -328,8 +328,8 @@ WTF\Account\[Account]\[Server]\[Character]\SavedVariables\
 <!-- CLAUDE_SKIP_START -->
 ### Official Blizzard Code
 All examples in this knowledge base reference:
-- WoW Version: **12.0.0 (Midnight)**
-- Interface Version: **120000**
+- WoW Version: **12.0.1 (Midnight)**
+- Interface Version: **120001**
 - Files Analyzed: **3,417** Blizzard UI files
 - Addons Documented: **281** official addons
 
@@ -391,9 +391,9 @@ This knowledge base includes:
 ## 📝 Version Information
 
 **Knowledge Base Version:** 2.0
-**WoW Version:** 12.0.0 (Midnight)
-**Interface Version:** 120000
-**Last Updated:** 2026-01-20
+**WoW Version:** 12.0.1 (Midnight)
+**Interface Version:** 120001
+**Last Updated:** 2026-03-28
 **Files Analyzed:** 3,417 Blizzard UI files + 21,514 community addon files
 **Documentation Files:** 13 comprehensive guides
 
