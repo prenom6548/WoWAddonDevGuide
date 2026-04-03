@@ -20,6 +20,7 @@
 16. [CooldownFrame Widget API](#cooldownframe-widget-api)
 17. [Addon Integration Patterns](#addon-integration-patterns)
 18. [Key Blizzard Source Files Reference](#key-blizzard-source-files-reference)
+19. [Taint Avoidance for CooldownViewer Frames](#taint-avoidance-for-cooldownviewer-frames)
 
 ---
 
@@ -406,7 +407,100 @@ local isOnGCD = (spellCooldownInfo.startTime == gcdInfo.startTime)
             and (spellCooldownInfo.duration == gcdInfo.duration);
 ```
 
+**Simpler alternative (12.0.1+):** `SpellCooldownInfo.isOnGCD` is a `NeverSecret` boolean field on the return from `C_Spell.GetSpellCooldown()`. This eliminates the need to query the dummy spell 61304:
+
+```lua
+local spellCooldownInfo = C_Spell.GetSpellCooldown(spellID);
+if spellCooldownInfo.isOnGCD then
+    -- This is just the GCD, not a real cooldown
+end
+```
+
 The `Available` alert is suppressed for GCD-only cooldowns and cooldowns shorter than 0.75 seconds.
+
+### Non-Secret Cooldown Fields for Logic
+
+As of 12.0.1, `SpellCooldownInfo.isActive` and `SpellCooldownInfo.isOnGCD` are both `NeverSecret`. Use these for branching logic (e.g., deciding whether to show a swipe, whether to desaturate an icon), reserving DurationObjects only for display. This avoids secret value issues entirely for decision-making code.
+
+### GCD Swipe Suppression
+
+Use `isOnGCD` to distinguish GCD-only swipes from real cooldowns. When the cooldown is GCD-only, suppress the swipe by setting the CooldownFrame's alpha to zero rather than hiding or clearing it:
+
+```lua
+if spellCooldownInfo.isOnGCD then
+    cooldownFrame:SetAlpha(0)  -- Hide GCD swipe visually
+else
+    cooldownFrame:SetAlpha(1)  -- Show real cooldown swipe
+end
+```
+
+### Active Swipe Suppression with Addon-Owned CooldownFrame
+
+When you need independent control over cooldown display (e.g., showing a spell cooldown swipe instead of Blizzard's aura swipe), suppress Blizzard's CooldownFrame with `SetAlpha(0)` and create your own:
+
+```lua
+-- Suppress Blizzard's CooldownFrame
+child.Cooldown:SetAlpha(0)
+
+-- Create addon-owned CooldownFrame
+local addonCD = CreateFrame("Cooldown", nil, child, "CooldownFrameTemplate")
+addonCD:SetAllPoints(child.Icon)
+addonCD:SetDrawEdge(false)
+addonCD:SetDrawBling(false)
+
+-- Copy timer font from Blizzard's countdown FontString
+local blizzFont = child.Cooldown:GetCountdownFontString()
+if blizzFont then
+    addonCD:SetCountdownFont(blizzFont:GetFont())
+end
+
+-- Raise charge/stack count frames above the addon CD
+local addonCDLevel = addonCD:GetFrameLevel()
+if child.Count then
+    child.Count:GetParent():SetFrameLevel(addonCDLevel + 4)
+end
+
+-- Use DurationObject for secret-safe display
+local dur = C_Spell.GetSpellCooldownDuration(spellID)
+if dur then
+    addonCD:SetCooldownFromDurationObject(dur)
+end
+```
+
+### Charge Cooldown Duration
+
+`C_Spell.GetSpellChargeDuration(spellID)` returns a `DurationObject` for the charge recharge timer. Use this alongside `C_Spell.GetSpellCharges()` when `maxCharges > 1`. For charge-based spells, prefer the charge recharge duration over the spell cooldown duration for the swipe display:
+
+```lua
+local chargeInfo = C_Spell.GetSpellCharges(spellID)
+if chargeInfo and chargeInfo.maxCharges > 1 then
+    -- Use charge duration for swipe
+    local chargeDur = C_Spell.GetSpellChargeDuration(spellID)
+    if chargeDur then
+        cooldownFrame:SetCooldownFromDurationObject(chargeDur)
+    end
+else
+    -- Use spell cooldown duration for swipe
+    local spellDur = C_Spell.GetSpellCooldownDuration(spellID)
+    if spellDur then
+        cooldownFrame:SetCooldownFromDurationObject(spellDur)
+    end
+end
+```
+
+### Inventory Item Cooldowns
+
+`GetInventoryItemCooldown("player", slotID)` tracks trinket and consumable cooldowns. Filter out GCD by checking the duration:
+
+```lua
+local start, duration, enable = GetInventoryItemCooldown("player", slotID)
+if enable == 1 and duration > 1.5 then
+    -- Real cooldown, not GCD
+    local dur = C_DurationUtil.CreateDuration()
+    dur:SetTimeFromStart(start, duration, 1)
+    cooldownFrame:SetCooldownFromDurationObject(dur)
+end
+```
 
 ### Range Checking
 
@@ -437,6 +531,14 @@ An out-of-range overlay texture (`UI-CooldownManager-OORshadow`) is also shown a
 ### Desaturation
 
 The icon texture is desaturated (`SetDesaturated(true)`) when the spell is on actual cooldown (`isOnActualCooldown = not isOnGCD and cooldownIsActive`). Desaturation is cleared when the cooldown ends or when an aura is being displayed instead.
+
+**Desaturation override for addons:** Blizzard's `RefreshIconDesaturation` uses the secret `isOnActualCooldown` field internally, which can cause issues in tainted contexts. Override with plain non-secret booleans:
+
+```lua
+local isRealCD = spellCooldownInfo.isActive and not spellCooldownInfo.isOnGCD
+local hasRemainingCharges = chargeInfo and chargeInfo.currentCharges > 0
+child.Icon:SetDesaturated(isRealCD == true and not hasRemainingCharges)
+```
 
 ---
 
@@ -483,6 +585,68 @@ local carriedOverToNewCast = extendedDuration - baseDuration;
 ```
 
 If `carriedOverToNewCast > 0`, the pandemic refresh window starts at `expirationTime - carriedOverToNewCast`. The pandemic alert only applies to **target debuffs** and only when the `PandemicTime` alert event type is configured.
+
+### Custom Pandemic Overlay System
+
+Blizzard's built-in `ShowPandemicStateFrame` / `CheckPandemicTimeDisplay` only calculates pandemic timing for **target auras**, making it unreliable for player buffs. Addons can suppress Blizzard's glow and drive custom pandemic overlays.
+
+**Suppressing Blizzard's pandemic glow:**
+
+```lua
+child.PandemicIcon:SetAlpha(0)  -- Hide Blizzard's pandemic indicator
+```
+
+**Driving custom overlays with DurationObjects and color curves:**
+
+```lua
+-- Get DurationObject for the aura
+local durObj = C_UnitAuras.GetAuraDuration(unit, auraInstanceID)
+
+-- Create a step color curve for pandemic thresholds
+local pandemicCurve = C_CurveUtil.CreateColorCurve()
+pandemicCurve:SetType(Enum.LuaCurveType.Step)
+pandemicCurve:AddPoint(0, CreateColor(1, 0, 0, 1))     -- <15%: red (pandemic window)
+pandemicCurve:AddPoint(0.15, CreateColor(1, 0.5, 0, 1)) -- 15-30%: orange (approaching)
+pandemicCurve:AddPoint(0.3, CreateColor(0, 0, 0, 0))    -- >30%: invisible (safe)
+```
+
+These curves are **secret-safe** because `DurationObject:EvaluateRemainingPercent(colorCurve)` evaluation happens at the C++ level.
+
+**Evaluating the curve on each frame:**
+
+```lua
+-- In OnUpdate handler (throttled to ~10/sec)
+local color = durObj:EvaluateRemainingPercent(pandemicCurve)
+local finalAlpha = C_CurveUtil.EvaluateColorValueFromBoolean(
+    durObj:IsZero(), 0, color.a
+)
+pandemicOverlay:SetAlpha(finalAlpha)
+pandemicOverlay:SetVertexColor(color.r, color.g, color.b)
+```
+
+**Throttling:** DurationObjects are snapshots that must be re-fetched each tick. Limit evaluations to approximately 10 per second per child (0.1s interval) to avoid unnecessary overhead:
+
+```lua
+local PANDEMIC_THROTTLE = 0.1
+local lastPandemicUpdate = 0
+
+frame:SetScript("OnUpdate", function(self, elapsed)
+    lastPandemicUpdate = lastPandemicUpdate + elapsed
+    if lastPandemicUpdate < PANDEMIC_THROTTLE then return end
+    lastPandemicUpdate = 0
+    -- Re-fetch DurationObject and evaluate curve
+end)
+```
+
+### Pandemic Overlay Styles
+
+Three common styles for pandemic overlays:
+
+| Style | Template/Approach | Description |
+|-------|-------------------|-------------|
+| Blizzard | CooldownPandemicFXTemplate | The built-in 3-texture pulse effect |
+| Border | BackdropTemplate | Pulsing border alpha driven by curve evaluation |
+| Proc | FlipBook animation | Uses `UI-HUD-ActionBar-Proc-Loop-Flipbook` atlas for a glowing proc-style effect |
 
 ---
 
@@ -555,6 +719,54 @@ The visual alerts inherit from `AnimateWhileShownTemplate` and are anchored to t
 
 Text-to-speech uses `TextToSpeechFrame_PlayCooldownAlertMessage(alert, formattedName, allowOverlappedSpeech)` with the spell name. Overlapped speech is enabled so multiple alerts can play simultaneously.
 
+### CDM Visual Alert Re-Anchoring
+
+Hook `CooldownViewerVisualAlertsManager:AcquireAlert()` to re-anchor marching ants alert frames from Blizzard's default -8/+9 px overhang to custom sizing. This is useful when custom FlipBook pulse overlays use different insets:
+
+```lua
+hooksecurefunc(CooldownViewerVisualAlertsManager, "AcquireAlert", function(self, alert, target)
+    -- Re-anchor the alert to match your custom overlay insets
+    local alertFrame = target:GetVisualAlertFrame()
+    if alertFrame then
+        alertFrame:ClearAllPoints()
+        alertFrame:SetPoint("TOPLEFT", target, "TOPLEFT", -4, 4)
+        alertFrame:SetPoint("BOTTOMRIGHT", target, "BOTTOMRIGHT", 4, -4)
+    end
+end)
+```
+
+### Multi-Layer Glow Effect System
+
+Addons can implement multiple independent glow styles on icons simultaneously. Each layer serves a different purpose:
+
+| Layer | Source | Atlas / Technique |
+|-------|--------|-------------------|
+| Flash | One-shot proc burst | `UI-HUD-ActionBar-Proc-Start-Flipbook` FlipBook |
+| Pulse | Looping proc glow | `UI-HUD-ActionBar-Proc-Loop-Flipbook` FlipBook with optional timer |
+| Approaching | Subtle border pulse | Wrapper frame with secret-safe alpha from curve evaluation |
+| Border | Alert border pulse | Same wrapper pattern, different trigger (e.g., low health) |
+| Active | State indicator | Active trinket/buff indicator pulse |
+
+**Secret-safe wrapper technique for duration-driven glows:**
+
+Create a plain frame wrapper. Set its alpha via secret-returning curve evaluation (since `SetAlpha` accepts secrets natively at the C++ level). The wrapper alpha then multiplies with the animated border alpha inside it:
+
+```lua
+-- Create wrapper whose alpha is driven by DurationObject curve
+local glowWrapper = CreateFrame("Frame", nil, iconFrame)
+glowWrapper:SetAllPoints()
+
+-- Animated border inside the wrapper
+local border = glowWrapper:CreateTexture(nil, "OVERLAY")
+border:SetAllPoints()
+-- ... set up pulse animation ...
+
+-- In OnUpdate: wrapper alpha comes from DurationObject evaluation
+local dur = C_UnitAuras.GetAuraDuration("player", auraInstanceID)
+local color = dur:EvaluateRemainingPercent(approachingCurve)
+glowWrapper:SetAlpha(color.a)  -- Secret-safe: SetAlpha handles secrets
+```
+
 ---
 
 ## Layout System
@@ -616,6 +828,40 @@ The class+spec tag is encoded as: `classID * 10 + specIndex` (e.g., Warrior Arms
 ### Undo Support
 
 `CooldownViewerSettingsDataProviderMixin:ResetToRestorePoint()` reverts to the last saved state. The layout manager's `CreateRestorePoint` / `ResetToRestorePoint` pattern is used by the settings UI to allow "Revert Changes" via a `StaticPopupDialog`.
+
+### Layout Data Sync Across Characters
+
+Store Blizzard layout data per class in an addon's saved variables via `C_CooldownViewer.GetLayoutData()`, and restore on login with `SetLayoutData()`. This enables cross-character layout sharing:
+
+```lua
+-- On logout: save current layout per class
+function addon:SaveLayoutForClass()
+    local classID = select(3, UnitClass("player"))
+    local rawData = C_CooldownViewer.GetLayoutData()
+    if rawData then
+        MyAddonDB.layoutsByClass = MyAddonDB.layoutsByClass or {}
+        MyAddonDB.layoutsByClass[classID] = rawData
+    end
+end
+
+-- On login: restore layout for this class (if saved)
+function addon:RestoreLayoutForClass()
+    local classID = select(3, UnitClass("player"))
+    local saved = MyAddonDB.layoutsByClass and MyAddonDB.layoutsByClass[classID]
+    if saved then
+        C_CooldownViewer.SetLayoutData(saved)
+    end
+end
+```
+
+### Layout Cache Invalidation
+
+The layout manager caches serialized data internally. To force it to re-read from the C API (e.g., after `SetLayoutData()`), invalidate the cache:
+
+```lua
+TextureLoadingGroupMixin.RemoveTexture(serializer, "cachedSerializedData")
+TextureLoadingGroupMixin.AddTexture({textures = dataProvider}, "displayDataDirty")
+```
 
 ### Import/Export
 
@@ -1040,6 +1286,18 @@ end
 
 See [Secret Safe APIs](12a_Secret_Safe_APIs.md) for comprehensive secret value handling patterns and [Advanced Techniques](10_Advanced_Techniques.md) for more complex cooldown display scenarios.
 
+### Enabling CooldownViewer Programmatically
+
+Before interacting with the CooldownViewer system, ensure it is enabled via the `cooldownViewerEnabled` CVar:
+
+```lua
+if GetCVar("cooldownViewerEnabled") ~= "1" then
+    SetCVar("cooldownViewerEnabled", "1")
+end
+```
+
+Guard against redundant `SetCVar` calls to avoid CVar taint propagation.
+
 ### Creating a Private Cooldown Frame
 
 ```lua
@@ -1068,6 +1326,226 @@ local function UpdateCooldown(spellID)
     
     local texture = C_Spell.GetSpellTexture(spellID);
     icon:SetTexture(texture);
+end
+```
+
+### Squarifying CooldownViewer Icons
+
+Replace the rounded mask and overlay with square equivalents for a cleaner look:
+
+```lua
+-- Replace rounded mask with square
+local maskTexture = child.Icon:GetMaskTexture(1)
+if maskTexture then
+    child.Icon:RemoveMaskTexture(maskTexture)
+    -- Apply a square mask or leave unmasked
+end
+
+-- Replace mask texture (FileID 6707800) with solid square
+child.IconMask:SetTexture("Interface\\Buttons\\WHITE8x8")
+
+-- Hide overlay atlas (do NOT remove it)
+child.IconOverlay:SetAlpha(0)
+
+-- Replace CooldownFrame swipe texture with square
+child.Cooldown:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
+
+-- Hide DebuffBorder via alpha, NEVER nil it (see Taint section)
+if child.DebuffBorder then
+    child.DebuffBorder:SetAlpha(0)
+end
+```
+
+### Squarifying Buff Bars
+
+Replace bar textures with solid rectangles for consistent theming:
+
+```lua
+-- Replace bar fill atlas with solid color
+child.Bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
+child.Bar:SetStatusBarColor(0.8, 0.6, 0.2, 1.0)
+
+-- Replace background atlas with solid dark rectangle
+child.Bar.BG:SetTexture("Interface\\Buttons\\WHITE8x8")
+child.Bar.BG:SetVertexColor(0.1, 0.1, 0.1, 0.8)
+
+-- Scale pip proportionally to bar height
+local barHeight = child.Bar:GetHeight()
+child.Bar.Pip:SetSize(2, barHeight)
+```
+
+### Icon Texture Override with SetTexture Guard Hook
+
+Apply custom textures and install a `hooksecurefunc` on `Icon:SetTexture` to re-apply after Blizzard's `RefreshSpellTexture` resets them. Use a recursion guard to prevent infinite loops:
+
+```lua
+local isApplyingTexture = false
+
+local function ApplyCustomTexture(child, textureID)
+    if isApplyingTexture then return end
+    isApplyingTexture = true
+    child.Icon:SetTexture(textureID)
+    isApplyingTexture = false
+end
+
+hooksecurefunc(child.Icon, "SetTexture", function(self, tex)
+    if isApplyingTexture then return end
+    -- Re-apply custom texture when Blizzard resets it
+    local customTex = GetCustomTextureForChild(child)
+    if customTex then
+        ApplyCustomTexture(child, customTex)
+    end
+end)
+```
+
+### Keybind Text Overlay
+
+Resolve `spellID` to a keybind and display it on icons. Create FontStrings on a **separate overlay frame** (parented to your container, not Blizzard frames) to avoid taint:
+
+```lua
+-- Resolve spellID to keybind
+local function GetKeybindForSpell(spellID)
+    -- Try action bar buttons first
+    local slots = C_ActionBar.FindSpellActionButtons(spellID)
+    if slots and #slots > 0 then
+        local command = "ACTIONBUTTON" .. slots[1]
+        local key = GetBindingKey(command)
+        if key then return key end
+    end
+    -- Fall back to direct spell binding
+    local spellName = C_Spell.GetSpellName(spellID)
+    if spellName then
+        return GetBindingKey("SPELL " .. spellName)
+    end
+    return nil
+end
+
+-- Create overlay frame on addon container (not on Blizzard frame)
+local keybindOverlay = CreateFrame("Frame", nil, addonContainer)
+keybindOverlay:SetAllPoints(child)
+local keybindText = keybindOverlay:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmallGray")
+keybindText:SetPoint("TOPLEFT", 2, -2)
+
+-- Invalidate on binding changes
+local bindingFrame = CreateFrame("Frame")
+bindingFrame:RegisterEvent("UPDATE_BINDINGS")
+bindingFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+bindingFrame:SetScript("OnEvent", function() RefreshAllKeybinds() end)
+```
+
+### Button Press Visual Mirroring
+
+Mirror action bar "pushed" visuals onto tracker icons. Hook `ActionButtonDown`/`ActionButtonUp` and LibActionButton-1.0 `PreClick` to resolve the pressed spell and find the matching CooldownViewer child:
+
+```lua
+-- Hook standard action buttons
+hooksecurefunc("ActionButtonDown", function(id)
+    local actionType, actionID = GetActionInfo(id)
+    if actionType == "spell" then
+        local child = FindChildBySpellID(actionID)
+        if child then
+            child.Icon:SetVertexColor(0.6, 0.6, 0.6)  -- Dim for "pressed"
+        end
+    end
+end)
+
+hooksecurefunc("ActionButtonUp", function(id)
+    -- Restore normal color
+    local actionType, actionID = GetActionInfo(id)
+    if actionType == "spell" then
+        local child = FindChildBySpellID(actionID)
+        if child then
+            child.Icon:SetVertexColor(1, 1, 1)
+        end
+    end
+end)
+```
+
+### Cross-Parent Rendering
+
+CooldownViewer children remain parented to the viewer but can be positioned via `SetPoint` to external container frames. Use `SetIgnoreParentAlpha(true)` to prevent parent alpha from affecting routed children:
+
+```lua
+-- Child stays parented to viewer but is positioned by container
+child:SetIgnoreParentAlpha(true)
+child:ClearAllPoints()
+child:SetPoint("BOTTOMLEFT", addonContainer, "BOTTOMLEFT", xOffset, yOffset)
+```
+
+This pattern keeps the Blizzard secure parent chain intact while giving the addon full control over positioning and visibility.
+
+### Spell Override Resolution
+
+Check for spell overrides when routing spells to icons. For example, Divine Toll may override to Hammer of Light:
+
+```lua
+local effectiveSpellID = C_Spell.GetOverrideSpell(baseSpellID)
+-- effectiveSpellID is the currently active version of the spell
+-- Falls back to baseSpellID if no override is active
+```
+
+### Skyriding Ability Override Mode
+
+Detect skyriding via `C_ActionBar.GetBonusBarIndex()` (bonus bar 11, offset 5). Scan action bar slots 121-132 for skyriding abilities and create standalone icon frames:
+
+```lua
+local SKYRIDING_BONUS_BAR = 11
+local SKYRIDING_SLOT_OFFSET = 120  -- Slots 121-132
+
+local function IsSkyriding()
+    return C_ActionBar.GetBonusBarIndex() == SKYRIDING_BONUS_BAR
+end
+
+local function GetSkyridingAbilities()
+    local abilities = {}
+    for slot = SKYRIDING_SLOT_OFFSET + 1, SKYRIDING_SLOT_OFFSET + 12 do
+        local actionType, id = GetActionInfo(slot)
+        if actionType == "spell" and id then
+            table.insert(abilities, { slot = slot, spellID = id })
+        end
+    end
+    return abilities
+end
+
+-- Create standalone icon frames with DurationObject-based cooldowns
+local function UpdateSkyridingCooldowns()
+    for _, ability in ipairs(GetSkyridingAbilities()) do
+        local dur = C_Spell.GetSpellCooldownDuration(ability.spellID)
+        if dur then
+            skyridingIcons[ability.slot].Cooldown:SetCooldownFromDurationObject(dur)
+        end
+    end
+end
+```
+
+### Custom Bar Content Enum Value
+
+Define values outside Blizzard's `Enum.CooldownViewerBarContent` range for custom display modes:
+
+```lua
+-- Blizzard values: 0=IconAndName, 1=IconOnly, 2=NameOnly
+-- Custom addon value (outside Blizzard range):
+local BAR_CONTENT_BAR_ONLY = 99  -- Bar only, no name or icon
+
+-- Usage in your layout logic:
+if barContent == BAR_CONTENT_BAR_ONLY then
+    child.Icon:SetAlpha(0)
+    child.Name:SetAlpha(0)
+end
+```
+
+### Checking Texture FileIDs with Secret Values
+
+Texture values read from frame properties can be secret in tainted contexts. Always check with `issecretvalue()` before comparing FileIDs:
+
+```lua
+local tex = child.Icon:GetTexture()
+if issecretvalue and issecretvalue(tex) then
+    -- Cannot compare, use fallback logic
+else
+    if tex == 6707800 then  -- Known mask FileID
+        -- Handle specific texture
+    end
 end
 ```
 
@@ -1116,3 +1594,132 @@ All paths are relative to `Interface/AddOns/Blizzard_CooldownViewer/` within the
 | .../Cooldown.lua | CooldownFrame_Set, _Clear, _SetDisplayAsPercentage |
 
 All paths are relative to `Blizzard_APIDocumentationGenerated/` except `Cooldown.lua` which is in `Blizzard_FrameXMLUtil/`.
+
+---
+
+## Taint Avoidance for CooldownViewer Frames
+
+CooldownViewer frames inherit `EditModeCooldownViewerSystemMixin`, making them implicitly protected. This introduces unique taint challenges for addon code that modifies these frames. This section documents critical pitfalls and their solutions.
+
+### Addon-Owned Container Pattern for Combat-Safe Operations
+
+Because viewer frames are implicitly protected, `SetWidth`, `SetHeight`, and `SetPoint` are restricted during combat. Solution: create **unprotected container frames** and anchor viewer icon children to them via `SetPoint` **without reparenting** the viewer.
+
+**Critical:** Reparenting a protected frame to a container makes the container implicitly protected per WoW's taint rules.
+
+```lua
+-- CORRECT: Anchor children to container WITHOUT reparenting
+local container = CreateFrame("Frame", nil, UIParent)
+container:SetSize(400, 100)
+container:SetPoint("CENTER")
+
+-- Child remains parented to viewer, but positioned relative to container:
+child:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", x, y)
+
+-- WRONG: Never reparent the viewer or its children
+-- viewer:SetParent(container)   -- Makes container implicitly protected!
+-- child:SetParent(container)    -- Same problem!
+```
+
+### Never Nil Out Frame Table Properties
+
+Any insecure write to a Blizzard frame table taints the key. For example, nilling out `DebuffBorder` causes `RefreshIconBorder` to read the tainted `nil` during secure `RefreshData()` execution, contaminating the secure context. This propagation chain can be devastating:
+
+1. Addon sets `child.DebuffBorder = nil` (tainted write)
+2. Blizzard's `RefreshIconBorder` reads `child.DebuffBorder` in secure context
+3. Taint propagates through child iteration to `CheckAllowOnCooldown`
+4. The file-local `wasOnGCDLookup` table becomes permanently tainted
+5. All subsequent cooldown operations produce "attempted to index a forbidden table" warnings
+
+```lua
+-- WRONG: Taints the frame table key
+child.DebuffBorder = nil
+
+-- CORRECT: Hide visually without modifying the table
+child.DebuffBorder:SetAlpha(0)
+```
+
+This rule applies to **all** Blizzard frame properties: `DebuffBorder`, `PandemicIcon`, `IconOverlay`, etc.
+
+### Never Hook Child Mixin Methods
+
+Hooks on child-level methods like `OnActiveStateChanged`, `OnUnitAuraAddedEvent`, or `NeedsAddedAuraUpdate` inject insecure addon code into Blizzard's secure aura-processing chain. This taints sibling `spellID` / `sourceUnit` comparisons in `NeedsAddedAuraUpdate`.
+
+**Safe to hook (viewer-level):**
+- `Layout`
+- `RefreshLayout`
+- `OnUnitAura`
+- `ProcessCooldownData`
+
+**Never hook (child-level):**
+- `OnActiveStateChanged`
+- `OnUnitAuraAddedEvent`
+- `NeedsAddedAuraUpdate`
+- `RefreshData`
+- `RefreshIconBorder`
+- `RefreshIconDesaturation`
+
+### Coalesced Layout via Dirty-Flag OnUpdate
+
+Instead of running layout on every event or hook, create a permanent watcher frame whose `OnUpdate` checks a dirty flag. Multiple events and hooks all just set `layoutDirty = true`. The OnUpdate fires once per render frame:
+
+```lua
+local layoutDirty = false
+
+-- Multiple triggers all just set the flag
+hooksecurefunc(viewer, "RefreshLayout", function()
+    layoutDirty = true
+end)
+
+hooksecurefunc(viewer, "OnUnitAura", function()
+    layoutDirty = true
+end)
+
+-- Single watcher processes once per frame
+local watcher = CreateFrame("Frame")
+watcher:SetScript("OnUpdate", function()
+    if not layoutDirty then return end
+    layoutDirty = false
+    addon:ApplyLayout(viewer)
+end)
+```
+
+This avoids redundant layout passes when multiple events fire in the same frame.
+
+### Viewer Alpha as Hide/Show Signal
+
+Use `SetIgnoreParentAlpha(true)` on all viewer icon children so the viewer's alpha does NOT cascade to them. Manage per-icon alpha directly. Use the viewer's alpha only as a binary signal (0=hidden, 1=shown):
+
+```lua
+-- Set up all children to ignore parent alpha
+for _, child in ipairs(viewer.activeFrames) do
+    child:SetIgnoreParentAlpha(true)
+end
+
+-- Monitor viewer alpha as a visibility signal
+hooksecurefunc(viewer, "SetAlpha", function(self, alpha)
+    if alpha == 0 then
+        addon:OnViewerHidden(self)
+    else
+        addon:OnViewerShown(self)
+    end
+end)
+```
+
+### SetAlpha(0) Not Hide() for Cosmetic Suppression
+
+Always use `SetAlpha(0)` instead of `Hide()` for suppressing Blizzard-managed CooldownViewer elements. `Hide()` can trigger combat lockdown issues on protected frames, and also disrupts Blizzard's internal show/hide state tracking:
+
+```lua
+-- CORRECT:
+child.IconOverlay:SetAlpha(0)
+child.DebuffBorder:SetAlpha(0)
+child.PandemicIcon:SetAlpha(0)
+child.Cooldown:SetAlpha(0)
+
+-- WRONG: Can cause combat lockdown errors
+-- child.IconOverlay:Hide()
+-- child.DebuffBorder:Hide()
+```
+
+This pattern applies to overlays, borders, pandemic icons, cooldown frames, and any other sub-element of a protected CooldownViewer child.

@@ -14,8 +14,9 @@
 11. [Common Patterns and Solutions](#common-patterns-and-solutions)
 12. [Testing and Debugging](#testing-and-debugging)
 13. [Real-World Examples](#real-world-examples)
-14. [Migration Checklist](#migration-checklist)
-15. [Quick Reference Table](#quick-reference-table)
+14. [CooldownViewer Frame Taint Pitfalls](#cooldownviewer-frame-taint-pitfalls)
+15. [Migration Checklist](#migration-checklist)
+16. [Quick Reference Table](#quick-reference-table)
 
 ---
 
@@ -1945,6 +1946,116 @@ Set up all private aura anchors during initialization (`ADDON_LOADED` / `PLAYER_
 
 ---
 
+## CooldownViewer Frame Taint Pitfalls
+
+Blizzard's CooldownViewer (`EditModeCooldownViewerSystemMixin`) is a protected frame managed by EditMode. Addons that customize its appearance or hook its behavior face several non-obvious taint pitfalls. These patterns apply broadly to **any Blizzard protected frame**, not just CooldownViewer.
+
+> **See also:** [Cooldown Viewer Guide](13_Cooldown_Viewer_Guide.md#taint-avoidance-for-cooldownviewer-frames) for the full CooldownViewer taint reference.
+
+### Never Nil Out Blizzard Frame Table Properties
+
+Any insecure write to a Blizzard frame table taints the key. Nilling out a property like `DebuffBorder` on a CooldownViewer icon causes `RefreshIconBorder` to read the tainted nil during secure `RefreshData()` execution, contaminating the secure context. This propagates through the child iteration loop to `CheckAllowOnCooldown`, permanently tainting the file-local `wasOnGCDLookup` table and causing "attempted to index a forbidden table" warnings on EditMode exit.
+
+```lua
+-- WRONG: Taints the frame table key
+child.DebuffBorder = nil
+
+-- CORRECT: Hide visually without modifying the table
+child.DebuffBorder:SetAlpha(0)
+```
+
+This rule applies to ALL Blizzard frames -- never write nil (or any value) to keys on Blizzard-owned frame tables from addon code. Use visual hiding (`SetAlpha(0)`, `SetSize(0.001, 0.001)`) instead of structural modification.
+
+### Never hooksecurefunc on Child Mixin Methods
+
+Hooks on CooldownViewer child mixin methods (`OnActiveStateChanged`, `OnUnitAuraAddedEvent`, etc.) inject insecure addon code into Blizzard's secure aura-processing chain. This taints sibling `spellID` / `sourceUnit` comparisons in `NeedsAddedAuraUpdate`, causing cascading taint through the entire aura update pipeline.
+
+**Safe to hook:** Viewer-level methods like `Layout`, `RefreshLayout`, `OnUnitAura`.
+
+**Never hook:** Individual child (icon) mixin methods that participate in secure aura/cooldown data processing.
+
+### Implicit Protection via Reparenting
+
+Reparenting a protected frame (CooldownViewer inherits `EditModeCooldownViewerSystemMixin`) to an addon-owned container makes that container implicitly protected. `SetWidth`, `SetHeight`, `SetPoint` on the container then fail during combat with "ADDON_ACTION_BLOCKED" errors. Solution: anchor children to the container via `SetPoint` WITHOUT reparenting the viewer.
+
+```lua
+-- CORRECT: Anchor children without reparenting
+local container = CreateFrame("Frame", nil, UIParent)
+child:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", x, y)
+
+-- WRONG: Never reparent a protected frame to your container
+-- viewer:SetParent(container)  -- Makes container implicitly protected!
+```
+
+### issecretvalue() on Texture FileIDs
+
+Texture values read from CooldownViewer frame properties (e.g., via `GetTexture()`) can be secret in tainted contexts. Always check `issecretvalue(tex)` before comparing texture FileIDs or using them as table keys:
+
+```lua
+local tex = icon.Icon:GetTexture()
+if issecretvalue and issecretvalue(tex) then
+    -- Cannot compare or use as table key -- skip or use fallback
+    return
+end
+if tex == SOME_EXPECTED_TEXTURE then
+    -- Safe to compare
+end
+```
+
+### Secret-Safe Alpha Wrapper Technique
+
+For glow or alert overlays that need to respond to secret-returning duration evaluations, create a plain wrapper frame and set its alpha via the secret-returning API (since `SetAlpha()` accepts secrets natively). The wrapper alpha multiplies with animated child alpha, making the overlay invisible when the wrapper alpha is 0:
+
+```lua
+local wrapper = CreateFrame("Frame", nil, parent)
+local glow = CreateFrame("Frame", nil, wrapper)
+-- ... set up glow animation on `glow` ...
+
+-- When duration evaluation returns a secret, use it directly for visibility:
+-- SetAlpha accepts secrets at C++ level
+wrapper:SetAlpha(C_CurveUtil.EvaluateColorValueFromBoolean(
+    duration:IsZero(), 0, 1
+))
+-- wrapper alpha 0 = glow invisible, wrapper alpha 1 = glow visible
+-- No Lua-level secret comparison needed
+```
+
+### Non-Secret Cooldown Fields for Logic Decisions
+
+`SpellCooldownInfo.isActive` and `SpellCooldownInfo.isOnGCD` are NeverSecret per 12.0.1. Use these for branching logic (if/else decisions), reserving DurationObjects only for display. This avoids secret value issues entirely for decision-making code:
+
+```lua
+local cooldownInfo = C_Spell.GetSpellCooldown(spellID)
+-- isActive and isOnGCD are NEVER secret -- safe for if/else
+if cooldownInfo.isActive and not cooldownInfo.isOnGCD then
+    -- Show cooldown display using duration object (secret-safe for display)
+    local duration = C_Spell.GetSpellCooldownDuration(spellID)
+    cooldown:SetCooldownFromDurationObject(duration)
+else
+    cooldown:Clear()
+end
+```
+
+### C_CurveUtil for Secret-Safe Duration Evaluation
+
+`C_CurveUtil.CreateColorCurve()` combined with `DurationObject:EvaluateRemainingPercent(curve)` evaluates remaining time at the C++ level, producing secret-safe color and alpha values. Combined with `C_CurveUtil.EvaluateColorValueFromBoolean()`, this enables threshold-based visibility without Lua-level secret comparisons:
+
+```lua
+-- Create a curve that maps remaining-percent to alpha
+-- e.g., alpha=1 when >10% remaining, fade to 0 below 10%
+local fadeCurve = C_CurveUtil.CreateColorCurve(
+    { percent = 0, value = 0 },   -- fully expired = invisible
+    { percent = 10, value = 1 },  -- 10% remaining = fully visible
+    { percent = 100, value = 1 }  -- full duration = fully visible
+)
+
+-- Evaluate entirely at C++ level -- result is secret-safe
+local alpha = duration:EvaluateRemainingPercent(fadeCurve)
+frame:SetAlpha(alpha)  -- SetAlpha accepts the result natively
+```
+
+---
+
 ## Migration Checklist
 
 ### For Existing Addons
@@ -2034,12 +2145,14 @@ Set up all private aura anchors during initialization (`ADDON_LOADED` / `PLAYER_
 ## See Also
 
 - [12_API_Migration_Guide.md](12_API_Migration_Guide.md) - Full migration guide including secret values in combat context
+- [13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md) - Cooldown Viewer system guide with full taint avoidance reference
 - [01_API_Reference.md](01_API_Reference.md) - General API reference
 - [10_Advanced_Techniques.md](10_Advanced_Techniques.md) - Advanced addon patterns
 
 ---
 
-*Last Updated: 2026-03-25*
+*Last Updated: 2026-04-02*
 *WoW Version: 12.0.0 / 12.0.1 (Midnight)*
 *Added: Comprehensive aura data secret values documentation (all fields secret except auraInstanceID), C_Spell.GetSpellInfo spell-name-lookup removal, pre-combat caching limitations, practical implications table for aura addon developers*
 *12.0.1 Updates: SetCooldown restricted (use SetCooldownFromDurationObject only), format precision specifiers restricted, UnitCreatureID/GetEffectiveAlpha/IsDesaturated return nil, new duration APIs (LoC, Totem), isActive/isEnabled/maxCharges non-secret, private aura APIs combat-restricted*
+*Added: CooldownViewer frame taint pitfalls section (frame table nil-writes, child mixin hooks, implicit reparenting protection, texture FileID secrets, alpha wrapper technique, non-secret cooldown fields, C_CurveUtil duration evaluation)*
