@@ -51,14 +51,21 @@ All four viewers are integrated with the Edit Mode system, allowing players to r
 
 All functions in the `C_CooldownViewer` namespace. Functions annotated with `SecretArguments = "AllowedWhenUntainted"` will reject calls from tainted (addon) execution contexts. See [Secret Safe APIs](12a_Secret_Safe_APIs.md) for details.
 
-| Function | Parameters | Returns | SecretArguments | Description |
-|----------|-----------|---------|----------------|-------------|
-| `GetCooldownViewerCategorySet` | `category` (CooldownViewerCategory), `allowUnlearned` (bool, default false) | `cooldownIDs` (table\<number\>) | AllowedWhenUntainted | Returns all cooldown IDs for a given category. When `allowUnlearned` is true, includes spells the player has not yet learned. |
-| `GetCooldownViewerCooldownInfo` | `cooldownID` (number) | `cooldownInfo` (CooldownViewerCooldown) or nothing | AllowedWhenUntainted | Returns the full data structure for a cooldown. May return nothing if the ID is invalid. |
-| `GetLayoutData` | *(none)* | `data` (string) | *(none)* | Returns the raw serialized layout data string from the account data store. |
-| `SetLayoutData` | `data` (string) | *(none)* | AllowedWhenUntainted | Writes a serialized layout data string to the account data store. |
-| `GetValidAlertTypes` | `cooldownID` (number) | `validAlertTypes` (table\<CooldownViewerAlertEventType\>) | AllowedWhenUntainted | Returns the list of alert event types valid for a given cooldown (e.g., a spell without charges will not include `ChargeGained`). |
-| `IsCooldownViewerAvailable` | *(none)* | `isAvailable` (bool), `failureReason` (string) | *(none)* | Returns whether the Cooldown Viewer system is available for the current character. Low-level characters may return false. |
+| Function | Parameters | Returns | Secret |
+|----------|-----------|---------|--------|
+| GetCooldownViewerCategorySet | category (CooldownViewerCategory), allowUnlearned (bool, default false) | cooldownIDs (table) | Untainted |
+| GetCooldownViewerCooldownInfo | cooldownID (number) | cooldownInfo (CooldownViewerCooldown) or nothing | Untainted |
+| GetLayoutData | *(none)* | data (string) | *(none)* |
+| SetLayoutData | data (string) | *(none)* | Untainted |
+| GetValidAlertTypes | cooldownID (number) | validAlertTypes (table) | Untainted |
+| IsCooldownViewerAvailable | *(none)* | isAvailable (bool), failureReason (string) | *(none)* |
+
+**Notes:**
+- **Secret = Untainted** means `SecretArguments = "AllowedWhenUntainted"` — these functions reject calls from tainted (addon) execution contexts.
+- `GetCooldownViewerCategorySet`: when `allowUnlearned` is true, includes spells the player has not yet learned.
+- `GetCooldownViewerCooldownInfo`: may return nothing if the cooldownID is invalid.
+- `GetLayoutData` / `SetLayoutData`: read/write the raw serialized layout string from the account data store.
+- `GetValidAlertTypes`: returns which alert event types are valid for a cooldown (e.g., a spell without charges won't include ChargeGained).
 
 ### CooldownViewerCooldown Structure
 
@@ -756,12 +763,23 @@ A dropdown at the top of the settings frame manages layouts:
 
 ### Four Viewer Frames
 
-| Frame Name | Mixin | Item Template | Icon Size | Category | EditMode Index | UIParentBottomManaged | Layout Index |
-|-----------|-------|---------------|-----------|----------|---------------|-----------------------|-------------|
-| `EssentialCooldownViewer` | `EssentialCooldownViewerMixin` | `CooldownViewerEssentialItemTemplate` | 50x50 | Essential | `Enum.EditModeCooldownViewerSystemIndices.Essential` | Yes | 10 |
-| `UtilityCooldownViewer` | `UtilityCooldownViewerMixin` | `CooldownViewerUtilityItemTemplate` | 30x30 | Utility | `Enum.EditModeCooldownViewerSystemIndices.Utility` | Yes | 11 |
-| `BuffIconCooldownViewer` | `BuffIconCooldownViewerMixin` | `CooldownViewerBuffIconItemTemplate` | 40x40 | TrackedBuff | `Enum.EditModeCooldownViewerSystemIndices.BuffIcon` | Yes | 9 |
-| `BuffBarCooldownViewer` | `BuffBarCooldownViewerMixin` | `CooldownViewerBuffBarItemTemplate` | 220x30 | TrackedBar | `Enum.EditModeCooldownViewerSystemIndices.BuffBar` | No | *(none)* |
+| Frame | Size | Category | Managed | Layout |
+|-------|------|----------|---------|--------|
+| EssentialCooldownViewer | 50x50 | Essential | Yes | 10 |
+| UtilityCooldownViewer | 30x30 | Utility | Yes | 11 |
+| BuffIconCooldownViewer | 40x40 | TrackedBuff | Yes | 9 |
+| BuffBarCooldownViewer | 220x30 | TrackedBar | No | *(none)* |
+
+**Frame details:**
+
+| Frame | Mixin | Item Template | EditMode Index |
+|-------|-------|---------------|----------------|
+| Essential | EssentialCooldownViewerMixin | CooldownViewerEssentialItemTemplate | .Essential |
+| Utility | UtilityCooldownViewerMixin | CooldownViewerUtilityItemTemplate | .Utility |
+| BuffIcon | BuffIconCooldownViewerMixin | CooldownViewerBuffIconItemTemplate | .BuffIcon |
+| BuffBar | BuffBarCooldownViewerMixin | CooldownViewerBuffBarItemTemplate | .BuffBar |
+
+EditMode indices are under `Enum.EditModeCooldownViewerSystemIndices`.
 
 All viewers inherit `CooldownViewerTemplate` which itself inherits `EditModeCooldownViewerSystemTemplate` and `GridLayoutFrame`. All have `ignoreInLayoutWhenActionBarIsOverriden = true` (except BuffBar which does not use UIParentBottomManaged).
 
@@ -841,13 +859,15 @@ The `Cooldown` frame type is a specialized frame widget that displays radial coo
 
 ### Setting Cooldown Values
 
-| Method | Parameters | SecretArguments | Description |
-|--------|-----------|----------------|-------------|
-| `SetCooldown` | `start`, `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1** from tainted code with secret values. Set cooldown by start time and duration. |
-| `SetCooldownDuration` | `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1.** Set cooldown by duration only. |
-| `SetCooldownFromExpirationTime` | `expirationTime`, `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1.** Set cooldown by expiration time. |
-| `SetCooldownUNIX` | `start`, `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1.** Set cooldown using UNIX timestamps. |
-| `SetCooldownFromDurationObject` | `duration` (LuaDurationObject), `clearIfZero=true` | AllowedWhenUntainted | **SAFE alternative** that accepts Duration objects from `C_Spell.GetSpellCooldownDuration()` or `C_DurationUtil.CreateDuration()`. This is the ONLY method usable from tainted code for displaying cooldowns with secret values. |
+| Method | Parameters | Status |
+|--------|-----------|--------|
+| SetCooldown | start, duration, modRate=1 | **RESTRICTED** (12.0.1) |
+| SetCooldownDuration | duration, modRate=1 | **RESTRICTED** (12.0.1) |
+| SetCooldownFromExpirationTime | expirationTime, duration, modRate=1 | **RESTRICTED** (12.0.1) |
+| SetCooldownUNIX | start, duration, modRate=1 | **RESTRICTED** (12.0.1) |
+| SetCooldownFromDurationObject | duration (LuaDurationObject), clearIfZero=true | **SAFE** |
+
+The four restricted methods have `SecretArguments = "AllowedWhenTainted"` and add the Cooldown secret aspect — they fail from tainted addon code with secret values in 12.0.1+. `SetCooldownFromDurationObject` has `SecretArguments = "AllowedWhenUntainted"` and is the **only** method usable from tainted code. Use `C_Spell.GetSpellCooldownDuration()` or `C_DurationUtil.CreateDuration()` to obtain Duration objects.
 
 ### Reading Cooldown Values (Secret-Returning)
 
@@ -1089,8 +1109,10 @@ All paths are relative to `Interface/AddOns/Blizzard_CooldownViewer/` within the
 
 | File | Description |
 |------|-------------|
-| `Blizzard_APIDocumentationGenerated/CooldownViewerDocumentation.lua` | C_CooldownViewer API documentation |
-| `Blizzard_APIDocumentationGenerated/CooldownViewerConstantsDocumentation.lua` | Enum definitions |
-| `Blizzard_APIDocumentationGenerated/EditModeManagerConstantsDocumentation.lua` | Edit Mode enums (VisibleSetting, BarContent, etc.) |
-| `Blizzard_APIDocumentationGenerated/FrameAPICooldownDocumentation.lua` | CooldownFrame widget API |
-| `Blizzard_FrameXMLUtil/Cooldown.lua` | `CooldownFrame_Set`, `CooldownFrame_Clear`, `CooldownFrame_SetDisplayAsPercentage` |
+| .../CooldownViewerDocumentation.lua | C_CooldownViewer API docs |
+| .../CooldownViewerConstantsDocumentation.lua | Enum definitions |
+| .../EditModeManagerConstantsDocumentation.lua | Edit Mode enums (VisibleSetting, BarContent) |
+| .../FrameAPICooldownDocumentation.lua | CooldownFrame widget API |
+| .../Cooldown.lua | CooldownFrame_Set, _Clear, _SetDisplayAsPercentage |
+
+All paths are relative to `Blizzard_APIDocumentationGenerated/` except `Cooldown.lua` which is in `Blizzard_FrameXMLUtil/`.
