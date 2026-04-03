@@ -38,7 +38,7 @@ function MyAddon:Initialize()
 end
 ```
 
-**Pattern: C_* Style Namespace (Modern)**
+**Pattern: C_\* Style Namespace (Modern)**
 ```lua
 -- Blizzard-style namespace for API functions
 MyAddon_Functions = {};
@@ -94,9 +94,7 @@ function MyAddon:ProcessPlayers()
 end
 
 -- AVOID: Direct global access in loops
-function MyAddon:ProcessPlayersS
-
-low()
+function MyAddon:ProcessPlayersSlow()
     for i = 1, 40 do
         -- Slower: global table lookup every iteration
         local name = _G.UnitName("raid" .. i);
