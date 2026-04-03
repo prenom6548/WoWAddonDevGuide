@@ -41,6 +41,7 @@ When requesting addon development assistance, provide Claude with:
    - `11_Housing_System_Guide.md` - For player housing APIs and patterns (12.0+)
    - `12_API_Migration_Guide.md` - For version upgrades, API compatibility, migration patterns
    - `12a_Secret_Safe_APIs.md` - Complete reference for 12.0+ secret values and secure execution
+   - `13_Cooldown_Viewer_Guide.md` - Cooldown Viewer (Cooldown Manager) system: C_CooldownViewer API, viewer frames, alert system, layout serialization
    - `QUICK_START_GUIDE.md` - For getting started quickly
 
 3. **Source file references** from the Blizzard UI source code

@@ -1373,6 +1373,8 @@ cooldown:SetCooldownFromDurationObject(duration)
 
 **Cooldown API Non-Secret Fields (12.0.1):** `isEnabled`, `maxCharges`, and the new `isActive` boolean are all non-secret. Use `isActive` to determine whether a cooldown display should be rendered, without needing to check secret `startTime`/`duration` values.
 
+> **See also:** [Cooldown Viewer Guide](13_Cooldown_Viewer_Guide.md#cooldown-tracking) for how Blizzard's own Cooldown Viewer handles secret-safe cooldown display.
+
 ---
 
 ## Common Patterns and Solutions

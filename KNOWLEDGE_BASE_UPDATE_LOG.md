@@ -1,6 +1,41 @@
 <\!-- CLAUDE_SKIP_START -->
 # WoW Addon Development Knowledge Base - Update Log
 
+## Version 2.9 - 2026-04-03
+
+### Added: Cooldown Viewer (Cooldown Manager) System Guide
+
+**Summary:**
+Added `13_Cooldown_Viewer_Guide.md` — a comprehensive reference for the Cooldown Viewer (Cooldown Manager) system introduced in WoW 12.0.0+. This guide covers 18 sections including the C_CooldownViewer API, enums, architecture, mixin hierarchy, spell ID resolution, cooldown/aura tracking, alert system (sound/visual/TTS), layout serialization, settings UI, CooldownFrame widget API, and addon integration patterns.
+
+**Files Created:**
+- `13_Cooldown_Viewer_Guide.md` - Complete Cooldown Viewer system reference (18 sections)
+
+**Files Updated:**
+- `01_API_Reference.md` - Added cross-reference to Cooldown Viewer guide
+- `03_UI_Framework.md` - Added cross-reference to Cooldown Viewer guide
+- `10_Advanced_Techniques.md` - Added cross-reference to Cooldown Viewer guide
+- `12_API_Migration_Guide.md` - Added cross-reference to Cooldown Viewer guide
+- `12a_Secret_Safe_APIs.md` - Added cross-reference to Cooldown Viewer guide
+- `00_MASTER_PROMPT.md` - Added reference to new guide
+- `QUICK_START_GUIDE.md` - Added to documentation list
+- `README.md` - Added to documentation list
+- `WoWAddon-Expert.md` (agent file) - Added Cooldown Viewer guide reference
+- `wow.md` (coordinator command file) - Added Cooldown Viewer guide reference
+- `KNOWLEDGE_BASE_UPDATE_LOG.md` - This entry
+
+**Key Topics Documented:**
+1. C_CooldownViewer API (all functions and their signatures)
+2. Enums: CooldownViewerAlertType, CooldownViewerCategoryType, CooldownViewerLayoutType
+3. System architecture and mixin hierarchy (CooldownViewerMixin, CooldownViewerSpellMixin, etc.)
+4. Spell ID resolution pipeline and cooldown/aura tracking internals
+5. Alert system covering sound, visual glow, and TTS notifications
+6. Layout serialization format and settings UI integration
+7. CooldownFrame widget API (SetCooldown, SetCooldownFromDurationObject, etc.)
+8. Addon integration patterns for extending or interacting with the Cooldown Viewer
+
+---
+
 ## Version 2.8 - 2026-03-25
 
 ### Correction: C_DamageMeter IS Usable by Third-Party Addons (With Workarounds)
@@ -658,9 +693,9 @@ This helps future maintainers understand the evolution and rationale behind the 
 
 ---
 
-**Log Version:** 2.8
+**Log Version:** 2.9
 **Created:** 2025-10-19
-**Last Updated:** 2026-03-25
+**Last Updated:** 2026-04-03
 **Maintained By:** AI-assisted documentation team
-**Knowledge Base Status:** Active, Version 2.8 (12.0.0 Midnight)
+**Knowledge Base Status:** Active, Version 2.9 (12.0.0 Midnight)
 <\!-- CLAUDE_SKIP_END -->

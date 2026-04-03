@@ -111,7 +111,8 @@ Many global functions have been removed. Use C_* namespaces:
 11. **10_Advanced_Techniques.md** - Production-level patterns
 12. **11_Housing_System_Guide.md** - Housing system APIs and development
 13. **12_API_Migration_Guide.md** - API version migration and compatibility
-14. **12a_Secret_Safe_APIs.md** - Complete 12.0+ secret values API reference (NEW)
+14. **12a_Secret_Safe_APIs.md** - Complete 12.0+ secret values API reference
+15. **13_Cooldown_Viewer_Guide.md** - Cooldown Viewer system: C_CooldownViewer API, alerts, layout, CooldownFrame widget (NEW)
 
 <!-- CLAUDE_SKIP_END -->
 ## Your First Addon - 5 Minute Tutorial

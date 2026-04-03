@@ -1,0 +1,1096 @@
+# WoW Cooldown Viewer / Cooldown Manager System Guide
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [C_CooldownViewer API](#c_cooldownviewer-api)
+3. [Events](#events)
+4. [Enums](#enums)
+5. [Architecture](#architecture)
+6. [Mixin Hierarchy](#mixin-hierarchy)
+7. [Spell ID Resolution](#spell-id-resolution)
+8. [Cooldown Tracking](#cooldown-tracking)
+9. [Aura Tracking](#aura-tracking)
+10. [Alert System](#alert-system)
+11. [Layout System](#layout-system)
+12. [Serialization](#serialization)
+13. [Settings UI](#settings-ui)
+14. [Viewer Frame Templates](#viewer-frame-templates)
+15. [Pandemic Alert Animation](#pandemic-alert-animation)
+16. [CooldownFrame Widget API](#cooldownframe-widget-api)
+17. [Addon Integration Patterns](#addon-integration-patterns)
+18. [Key Blizzard Source Files Reference](#key-blizzard-source-files-reference)
+
+---
+
+## Overview
+
+The **Cooldown Viewer** (user-facing name) or **Cooldown Manager** (internal name / `CDM`) is a built-in HUD system introduced in **WoW 12.0.0 (Midnight)**. It is retail-only (`AllowLoadGameType: standard`) and depends on `Blizzard_EditMode`.
+
+The system provides four viewer frames, each displaying a different category of player abilities:
+
+| Viewer | Category | Purpose |
+|--------|----------|---------|
+| **Essential Cooldowns** | `Essential` | Major cooldowns (defensive/offensive CDs) |
+| **Utility Cooldowns** | `Utility` | Minor utility spells |
+| **Tracked Buff Icons** | `TrackedBuff` | Self-buff/debuff tracking as icons |
+| **Tracked Buff Bars** | `TrackedBar` | Self-buff/debuff tracking as status bars |
+
+All four viewers are integrated with the Edit Mode system, allowing players to reposition, resize, and configure them. The first three are managed by `UIParentBottomManagedFrameTemplate` for automatic bottom-bar layout; the Buff Bar viewer is not.
+
+### CVars
+
+| CVar | Type | Description |
+|-------|------|-------------|
+| `cooldownViewerEnabled` | bool | Master toggle for all Cooldown Viewer frames |
+| `cooldownViewerShowUnlearned` | bool | Show unlearned spells in the Settings UI |
+
+---
+
+## C_CooldownViewer API
+
+All functions in the `C_CooldownViewer` namespace. Functions annotated with `SecretArguments = "AllowedWhenUntainted"` will reject calls from tainted (addon) execution contexts. See [Secret Safe APIs](12a_Secret_Safe_APIs.md) for details.
+
+| Function | Parameters | Returns | SecretArguments | Description |
+|----------|-----------|---------|----------------|-------------|
+| `GetCooldownViewerCategorySet` | `category` (CooldownViewerCategory), `allowUnlearned` (bool, default false) | `cooldownIDs` (table\<number\>) | AllowedWhenUntainted | Returns all cooldown IDs for a given category. When `allowUnlearned` is true, includes spells the player has not yet learned. |
+| `GetCooldownViewerCooldownInfo` | `cooldownID` (number) | `cooldownInfo` (CooldownViewerCooldown) or nothing | AllowedWhenUntainted | Returns the full data structure for a cooldown. May return nothing if the ID is invalid. |
+| `GetLayoutData` | *(none)* | `data` (string) | *(none)* | Returns the raw serialized layout data string from the account data store. |
+| `SetLayoutData` | `data` (string) | *(none)* | AllowedWhenUntainted | Writes a serialized layout data string to the account data store. |
+| `GetValidAlertTypes` | `cooldownID` (number) | `validAlertTypes` (table\<CooldownViewerAlertEventType\>) | AllowedWhenUntainted | Returns the list of alert event types valid for a given cooldown (e.g., a spell without charges will not include `ChargeGained`). |
+| `IsCooldownViewerAvailable` | *(none)* | `isAvailable` (bool), `failureReason` (string) | *(none)* | Returns whether the Cooldown Viewer system is available for the current character. Low-level characters may return false. |
+
+### CooldownViewerCooldown Structure
+
+Returned by `GetCooldownViewerCooldownInfo`:
+
+| Field | Type | Nilable | Description |
+|-------|------|---------|-------------|
+| `cooldownID` | number | No | Unique identifier for this cooldown entry |
+| `spellID` | number | No | The base spell ID |
+| `overrideSpellID` | number | Yes | Current override spell (talent morphs, etc.) |
+| `overrideTooltipSpellID` | number | Yes | Tooltip-specific override (linked spell acting as display) |
+| `linkedSpellIDs` | table\<number\> | No | Up to 4 related spell IDs (e.g., DoT applied by the ability) |
+| `selfAura` | bool | No | Whether this cooldown applies a self-buff |
+| `hasAura` | bool | No | Whether this cooldown has any associated aura |
+| `charges` | bool | No | Whether this spell uses the charge system |
+| `isKnown` | bool | No | Whether the player currently knows this spell |
+| `flags` | CooldownSetSpellFlags | No | Bitfield flags (HideAura, HideByDefault) |
+| `category` | CooldownViewerCategory | No | Default category assignment |
+
+---
+
+## Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `COOLDOWN_VIEWER_DATA_LOADED` | *(none)* | Fires synchronously when cooldown viewer data is loaded and ready. |
+| `COOLDOWN_VIEWER_SPELL_OVERRIDE_UPDATED` | `baseSpellID` (number), `overrideSpellID` (number or nil) | Fires synchronously when a spell override is added or removed. A nil `overrideSpellID` means the override was removed from the base spell. |
+| `COOLDOWN_VIEWER_TABLE_HOTFIXED` | *(none)* | Fires synchronously when the server hotfixes the cooldown data tables. Triggers a full data refresh. |
+
+The system also uses the `EventRegistry` for internal communication:
+
+| EventRegistry Callback | Description |
+|------------------------|-------------|
+| `CooldownViewerSettings.OnShow` | Settings window opened |
+| `CooldownViewerSettings.OnHide` | Settings window closed |
+| `CooldownViewerSettings.OnDataChanged` | Layout or cooldown data changed |
+| `CooldownViewerSettings.OnPendingChanges` | Layout manager has unsaved changes |
+| `CooldownViewerSettings.OnEnterItem` | Mouse entered a settings item (drag-and-drop) |
+
+---
+
+## Enums
+
+### CooldownViewerCategory
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `Essential` | Major cooldowns viewer |
+| 1 | `Utility` | Utility cooldowns viewer |
+| 2 | `TrackedBuff` | Tracked buff icons viewer |
+| 3 | `TrackedBar` | Tracked buff bars viewer |
+| -1 | `HiddenSpell` | Pseudo-category: disabled spells (not in any viewer) |
+| -2 | `HiddenAura` | Pseudo-category: disabled auras (not in any viewer) |
+
+`HiddenSpell` and `HiddenAura` are injected at runtime in `CooldownViewerSettingsConstants.lua` and are NOT part of the C++ enum. They exist so that disabled cooldowns can use the same category system as visible ones.
+
+### CooldownViewerAlertEventType
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 1 | `Available` | Cooldown finished (non-GCD, duration > 0.75s) |
+| 2 | `PandemicTime` | Pandemic refresh window started (target debuff) |
+| 3 | `OnCooldown` | Ability just went on cooldown |
+| 4 | `ChargeGained` | A charge was gained |
+
+### CooldownViewerAlertType
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 1 | `Sound` | Play a sound effect or TTS |
+| 2 | `Visual` | Show a visual alert animation |
+
+### CooldownSetSpellFlags
+
+Bitfield flags on `CooldownViewerCooldown.flags`:
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 1 | `HideAura` | Do not use aura data for cooldown display |
+| 2 | `HideByDefault` | Start in the hidden/disabled category |
+
+### CooldownSetLinkedSpellFlags
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 1 | `UseAsTooltip` | Use this linked spell as the tooltip override |
+
+### CooldownViewerAddAlertStatus
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `Success` | Alert added successfully |
+| 1 | `InvalidAlertType` | Alert type is not recognized |
+| 2 | `InvalidEventType` | Alert event type is out of range |
+| 3 | `DuplicateAlert` | An identical alert already exists |
+
+### CooldownLayoutType
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 1 | `Character` | Per-character layout |
+| 2 | `Account` | Account-wide layout (not yet implemented) |
+
+### CooldownLayoutStatus
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `Success` | Operation succeeded |
+| 1 | `InvalidLayoutName` | Layout name is invalid |
+| 2 | `TooManyLayouts` | Maximum layout count reached |
+| 3 | `AttemptToModifyDefaultLayoutWouldCreateTooManyLayouts` | Cannot auto-create layout |
+| 4 | `TooManyAlerts` | Maximum alert count reached |
+| 5 | `InvalidOrderChange` | Reorder operation is invalid |
+| 6 | `NoValidAlerts` | No valid alert types for this cooldown |
+
+### CooldownLayoutAction
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `ChangeOrder` | Reorder cooldowns |
+| 1 | `ChangeCategory` | Move cooldown to different category |
+| 2 | `AddLayout` | Create a new layout |
+| 3 | `AddAlert` | Add an alert to a cooldown |
+
+### CooldownViewerVisibleSetting
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `Always` | Always visible |
+| 1 | `InCombat` | Only visible during combat |
+| 2 | `Hidden` | Never visible (unless in Edit Mode) |
+
+### CooldownViewerBarContent
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `IconAndName` | Show icon and spell name on buff bars |
+| 1 | `IconOnly` | Show only the icon |
+| 2 | `NameOnly` | Show only the spell name |
+
+### CooldownViewerOrientation
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `Horizontal` | Icons arranged horizontally |
+| 1 | `Vertical` | Icons arranged vertically |
+
+### CooldownViewerIconDirection
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 0 | `Left` | Icons grow leftward (or upward when vertical) |
+| 1 | `Right` | Icons grow rightward (or downward when vertical) |
+
+### CDMLayoutMode
+
+Lua-only enum controlling whether layout operations can create new layouts:
+
+| Value | Name | Description |
+|-------|------|-------------|
+| `false` | `AccessOnly` | Read-only access, do not create layouts |
+| `true` | `AllowCreate` | Allow creating layouts if none exists |
+
+### UI Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `COOLDOWN_VIEWER_LINKED_SPELLS_SIZE` | 4 | Maximum linked spells per cooldown |
+| `COOLDOWN_VIEWER_CATEGORY_SET_SIZE` | 16 | Maximum cooldowns per category |
+
+---
+
+## Architecture
+
+### File Listing
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `Blizzard_CooldownViewer.toc` | 27 | TOC file; load order, dependencies |
+| `CooldownViewerSettingsConstants.lua` | 140 | Enums, pseudo-categories, sound/visual enum definitions |
+| `CooldownViewerUtil.lua` | 53 | Class+spec tag encoding, utility helpers |
+| `CooldownViewerVisualAlert.lua` | 84 | Base visual alert mixin (anchor, target, lifecycle) |
+| `CooldownViewerVisualAlertTemplates.lua` | 65 | MarchingAnts and Flash alert mixin implementations |
+| `CooldownViewerVisualAlertTemplates.xml` | 88 | XML templates for all 10 visual alert variants |
+| `CooldownViewerVisualAlertsManager.lua` | 32 | Pool-based visual alert manager (acquire/release) |
+| `CooldownViewerVisualAlertsManager.xml` | 8 | XML frame for the visual alerts manager singleton |
+| `CooldownViewerVisualAlertTarget.lua` | 58 | Target mixin for frames that can receive visual alerts |
+| `CooldownViewerSoundAlertData.lua` | 87 | Sound alert data (67 sounds across 6 categories + TTS) |
+| `CooldownViewerVisualAlertData.lua` | 14 | Visual alert data (10 visual types) |
+| `CooldownViewerAlert.lua` | 254 | Alert data structure, play logic, TTS/sound/visual dispatch |
+| `CooldownViewerSettingsAlerts.lua` | 220 | Alert editing panel (3 dropdowns, add/edit logic) |
+| `CooldownViewerSettingsAlerts.xml` | 88 | XML for the alert editing panel |
+| `CooldownViewerSettingsDataStoreSerialization.lua` | 443 | CBOR/Deflate/Base64 serialization, version migration (v1-v4) |
+| `CooldownViewerSettingsLayoutManager.lua` | 978 | Layout CRUD, undo, import/export, alert management |
+| `CooldownViewerSettingsDataProvider.lua` | 342 | Display data provider, category filtering, reordering |
+| `CooldownViewerItemData.lua` | 471 | Item data mixin (spell resolution, aura lookup, tooltip) |
+| `CooldownViewerSettingsDialogs.lua` | 58 | Import/export dialog mixins |
+| `CooldownViewerSettingsDialogs.xml` | 14 | XML for settings dialogs |
+| `CooldownViewerSettings.lua` | 1717 | Full settings UI frame (tabs, search, drag-drop, categories) |
+| `CooldownViewerSettings.xml` | 261 | XML for the settings frame (399x609, ButtonFrameTemplate) |
+| `CooldownViewer.lua` | 2043 | Core viewer/item mixins, cooldown/aura tracking, event dispatch |
+| `PandemicAlertAnimation.xml` | 82 | Pandemic alert animation templates (icon pulse, bar rotation) |
+| `CooldownViewer.xml` | 334 | XML for all 4 viewer frames and item templates |
+
+**Total: 27 files, ~7,934 lines**
+
+### Load Order (from .toc)
+
+1. `CooldownViewerSettingsConstants.lua` -- Enums and constants
+2. `CooldownViewerUtil.lua` -- Utility functions
+3. `CooldownViewerVisualAlert.lua` -- Visual alert base
+4. `CooldownViewerVisualAlertTemplates.lua` -- Visual alert implementations
+5. `CooldownViewerVisualAlertTemplates.xml` -- Visual alert XML templates
+6. `CooldownViewerVisualAlertsManager.lua` -- Alert pool manager
+7. `CooldownViewerVisualAlertsManager.xml` -- Manager XML frame
+8. `CooldownViewerVisualAlertTarget.lua` -- Alert target mixin
+9. `CooldownViewerSoundAlertData.lua` -- Sound data
+10. `CooldownViewerVisualAlertData.lua` -- Visual data
+11. `CooldownViewerAlert.lua` -- Alert core logic
+12. `CooldownViewerSettingsAlerts.lua` -- Alert editing UI
+13. `CooldownViewerSettingsAlerts.xml` -- Alert editing XML
+14. `CooldownViewerSettingsDataStoreSerialization.lua` -- Serialization
+15. `CooldownViewerSettingsLayoutManager.lua` -- Layout management
+16. `CooldownViewerSettingsDataProvider.lua` -- Data provider
+17. `CooldownViewerItemData.lua` -- Item data mixin
+18. `CooldownViewerSettingsDialogs.lua` -- Dialog mixins
+19. `CooldownViewerSettingsDialogs.xml` -- Dialog XML
+20. `CooldownViewerSettings.lua` -- Settings UI
+21. `CooldownViewerSettings.xml` -- Settings XML
+22. `CooldownViewer.lua` -- Core viewer logic
+23. `PandemicAlertAnimation.xml` -- Pandemic animations
+24. `CooldownViewer.xml` -- Viewer frame definitions
+
+### Dependencies
+
+- **Required:** `Blizzard_EditMode` -- provides `EditModeCooldownViewerSystemMixin` and `EditModeCooldownViewerSystemTemplate`
+- **Load restriction:** `AllowLoadGameType: standard` (retail only)
+
+---
+
+## Mixin Hierarchy
+
+### Item Mixins (individual cooldown/buff slots)
+
+```
+CooldownViewerItemDataMixin           -- Data layer: spell ID resolution, aura lookup, tooltip
+  + CooldownViewerVisualAlertTargetMixin -- Can receive visual alerts
+  = CooldownViewerItemMixin            -- Display layer: OnUpdate, alerts, pandemic, shown state
+    |
+    +-- CooldownViewerCooldownItemMixin -- Cooldown-specific: charges, range check, icon color, glow
+    |   +-- CooldownViewerEssentialItemMixin  -- (empty, inherits all)
+    |   +-- CooldownViewerUtilityItemMixin    -- (empty, inherits all)
+    |
+    +-- CooldownViewerBuffItemMixin     -- Buff-specific: aura active state, totem support
+        +-- CooldownViewerBuffIconItemMixin   -- Icon display: reverse swipe, applications
+        +-- CooldownViewerBuffBarItemMixin    -- Bar display: StatusBar, pip, name, duration text
+```
+
+### Viewer Mixins (container frames)
+
+```
+CooldownViewerMixin                    -- Base: item pool, aura map, layout, visibility
+  |
+  +-- CooldownViewerCooldownMixin      -- Adds spell activation, range, usable events
+  |   + EditModeCooldownViewerSystemMixin
+  |   + UIParentManagedFrameMixin
+  |   + GridLayoutFrameMixin
+  |   = EssentialCooldownViewerMixin
+  |
+  |   + EditModeCooldownViewerSystemMixin
+  |   + UIParentManagedFrameMixin
+  |   + GridLayoutFrameMixin
+  |   = UtilityCooldownViewerMixin
+  |
+  +-- CooldownViewerBuffMixin          -- Buff-specific viewer base (no extra events)
+      + EditModeCooldownViewerSystemMixin
+      + UIParentManagedFrameMixin
+      + GridLayoutFrameMixin
+      = BuffIconCooldownViewerMixin    -- Single row/column stride
+      
+      + EditModeCooldownViewerSystemMixin
+      + GridLayoutFrameMixin
+      = BuffBarCooldownViewerMixin     -- Bar width scaling, bar content mode, NO UIParentManaged
+```
+
+---
+
+## Spell ID Resolution
+
+`CooldownViewerItemDataMixin:GetSpellID()` resolves the "active" spell ID using a priority chain. This determines which spell is used for cooldown display, aura lookup, tooltip, and texture.
+
+### Priority Chain (highest to lowest)
+
+| Priority | Source | Field | When Used |
+|----------|--------|-------|-----------|
+| 1 | **Active Aura** | `self.auraSpellID` | An aura matching any associated spell is currently active |
+| 2 | **Linked Spell** | `cooldownInfo.linkedSpellID` | A linked spell has an active aura (set via `UpdateLinkedSpell`) |
+| 3 | **Override Tooltip** | `cooldownInfo.overrideTooltipSpellID` | A linked spell with `UseAsTooltip` flag is configured |
+| 4 | **Override Spell** | `cooldownInfo.overrideSpellID` | Talent morphs or temporary spell overrides are active |
+| 5 | **Base Spell** | `cooldownInfo.spellID` | Default fallback |
+
+### Texture Resolution
+
+`GetSpellTexture()` follows a similar chain but with one key difference: when falling through to the base spell, it calls `C_Spell.GetSpellTexture(baseSpellID)` which internally handles override spell textures. This means the texture chain does not need to explicitly check `overrideSpellID`.
+
+```lua
+-- Texture priority:
+-- 1. auraSpellID texture
+-- 2. linkedSpellID texture
+-- 3. overrideTooltipSpellID texture
+-- 4. C_Spell.GetSpellTexture(baseSpellID) -- handles overrides internally
+-- 5. Fallback (edit mode placeholder icon)
+```
+
+---
+
+## Cooldown Tracking
+
+### CacheCooldownValues Priority
+
+`CooldownViewerCooldownItemMixin:CacheCooldownValues()` checks multiple data sources in priority order. Each source can set `wasSetFrom*` flags; later sources skip updating values if a higher-priority source already ran.
+
+| Priority | Source | Method | When Active |
+|----------|--------|--------|-------------|
+| 1 | **Charges** | `CheckCacheCooldownValuesFromCharges` | Spell has charges AND charge cooldown is active AND charges > 0 |
+| 2 | **Spell Cooldown** | `CheckCacheCooldownValuesFromSpellCooldown` | `C_Spell.GetSpellCooldown` returns data AND charges did not claim priority |
+| 3 | **Aura** | `CheckCacheCooldownValuesFromAura` | Self-buff or totem is active AND `HideAura` flag is not set |
+| 4 | **Edit Mode** | `CheckCacheCooldownValuesFromEditMode` | In Edit Mode AND no real spell data was set |
+
+### GCD Detection
+
+The system uses spell ID **61304** (a dummy GCD spell) to detect whether a spell's cooldown is actually just the GCD:
+
+```lua
+local gcdInfo = C_Spell.GetSpellCooldown(61304);
+-- If spell's startTime and duration match the GCD info exactly, it's on GCD
+local isOnGCD = (spellCooldownInfo.startTime == gcdInfo.startTime)
+            and (spellCooldownInfo.duration == gcdInfo.duration);
+```
+
+The `Available` alert is suppressed for GCD-only cooldowns and cooldowns shorter than 0.75 seconds.
+
+### Range Checking
+
+Range checking is opt-in per spell:
+
+1. On `CooldownIDSet`, check `C_Spell.SpellHasRange(baseSpellID)`
+2. If true, call `C_Spell.EnableSpellRangeCheck(spellID, true)` and register `SPELL_RANGE_CHECK_UPDATE`
+3. On range update, set `self.spellOutOfRange` and refresh icon color
+4. On `CooldownIDCleared`, call `C_Spell.EnableSpellRangeCheck(spellID, false)` and unregister the event
+
+### Icon Coloring
+
+Four states, checked in order:
+
+| State | Color | RGB | Condition |
+|-------|-------|-----|-----------|
+| Out of Range | Red | `(0.64, 0.15, 0.15)` | `spellOutOfRange == true` |
+| Usable | White | `(1.0, 1.0, 1.0)` | `C_Spell.IsSpellUsable` returns true |
+| Not Enough Mana | Blue | `(0.5, 0.5, 1.0)` | `notEnoughMana` is true |
+| Not Usable | Gray | `(0.4, 0.4, 0.4)` | Default fallback |
+
+An out-of-range overlay texture (`UI-CooldownManager-OORshadow`) is also shown at 50% alpha.
+
+### Overlay Glow
+
+`ActionButtonSpellAlertManager` handles proc overlay glow effects. The system checks `C_SpellActivationOverlay.IsSpellOverlayed(spellID)` on data refresh and responds to `SPELL_ACTIVATION_OVERLAY_GLOW_SHOW` / `SPELL_ACTIVATION_OVERLAY_GLOW_HIDE` events.
+
+### Desaturation
+
+The icon texture is desaturated (`SetDesaturated(true)`) when the spell is on actual cooldown (`isOnActualCooldown = not isOnGCD and cooldownIsActive`). Desaturation is cleared when the cooldown ends or when an aura is being displayed instead.
+
+---
+
+## Aura Tracking
+
+### Self-Buff Tracking
+
+The system registers `UNIT_AURA` for both `"player"` and `"target"` via `RegisterUnitEvent`.
+
+For **player auras**, the system uses the `unitAuraUpdateInfo` payload for efficient updates:
+
+- **Added:** Iterate `addedAuras`, check if any match associated spell IDs
+- **Updated:** Look up item frames via `auraInstanceIDToItemFramesMap`
+- **Removed:** Look up item frames via `auraInstanceIDToItemFramesMap`, clear aura state
+
+The `auraInstanceIDToItemFramesMap` provides O(1) lookup from `auraInstanceID` to the item frame(s) tracking that aura. Items register/unregister when their aura instance changes.
+
+### Target Debuff Tracking
+
+For **target auras**, any change triggers a full refresh of all active frames (`RefreshActiveFramesForTargetChange`). Target debuffs are cached per-frame using `GetTargetAurasCached()` which queries `C_UnitAuras.GetUnitAuras("target", "HARMFUL|PLAYER")` once per `GetTime()` tick.
+
+On `UNIT_TARGET` (player changes target), all items reset their state via `OnNewTarget()`:
+- Active state forced to false
+- Linked spell cleared
+- Pandemic alert state cleared
+- Full data refresh
+
+### Totem Tracking
+
+`PLAYER_TOTEM_UPDATE` is handled by calling `GetTotemInfo(slot)` and passing totem data to each item. Totem data includes slot, name, expirationTime, duration, and modRate. Totems take priority over aura data when both are present.
+
+### Linked Spells
+
+Each cooldown can have up to 4 linked spells (`linkedSpellIDs`). When a linked spell gains an active aura, it takes precedence over the base spell for display purposes. The `UpdateLinkedSpell` method checks incoming spell IDs against the linked list and promotes/demotes them.
+
+### Pandemic Alert Calculation
+
+The pandemic window is calculated using two APIs:
+
+```lua
+local extendedDuration = C_UnitAuras.GetRefreshExtendedDuration("target", auraInstanceID, spellID);
+local baseDuration = C_UnitAuras.GetAuraBaseDuration("target", auraInstanceID, spellID);
+local carriedOverToNewCast = extendedDuration - baseDuration;
+```
+
+If `carriedOverToNewCast > 0`, the pandemic refresh window starts at `expirationTime - carriedOverToNewCast`. The pandemic alert only applies to **target debuffs** and only when the `PandemicTime` alert event type is configured.
+
+---
+
+## Alert System
+
+### Alert Data Structure
+
+Alerts are stored as compact 3-element arrays for serialization efficiency:
+
+```lua
+-- { type, event, payload }
+-- Index 1: CooldownViewerAlertType (Sound or Visual)
+-- Index 2: CooldownViewerAlertEventType (Available, PandemicTime, OnCooldown, ChargeGained)
+-- Index 3: Payload (CooldownViewerSound enum or CooldownViewerVisual enum)
+```
+
+Accessor functions: `CooldownViewerAlert_GetType`, `CooldownViewerAlert_GetEvent`, `CooldownViewerAlert_GetPayload`.
+
+### Alert Event Types and Triggers
+
+| Event Type | Triggers When | Conditions |
+|-----------|---------------|------------|
+| `Available` | Cooldown finishes | Non-GCD, duration > 0.75s, `cooldownEnabled` is true |
+| `PandemicTime` | Pandemic refresh window opens | Target debuff, `carriedOverToNewCast > 0` |
+| `OnCooldown` | Ability goes on cooldown | Transitions from GCD/off-CD to actual cooldown |
+| `ChargeGained` | A charge is predicted to be gained | `predictedChargeGainTime <= GetTime()` |
+
+Alert dispatch is handled in `CooldownViewerItemMixin:OnUpdate()` which checks trigger times each frame.
+
+### Sound Alerts
+
+**68 total options:** 67 sound effects across 6 categories, plus Text-to-Speech.
+
+| Category | Count | Examples |
+|----------|-------|---------|
+| Animals | 10 | Cat, Chicken, Cow, Gnoll, Goat, Lion, Panther, Rattlesnake, Sheep, Wolf |
+| Devices | 11 | Boat Horn, Air Horn, Bike Horn, Cash Register, Jackpot Bell/Coins/Fail, Rotary Phone Dial/Ring, Stove Pipe, Trashcan Lid |
+| Impacts | 10 | Anvil Strike, Bubble Smash, Low Thud, Metal Clanks/Rattle/Scrape/Warble, Pop Click, Strange Clang, Sword Scrape |
+| Instruments | 12 | Bell Ring/Trill, Brass, Chime Ascending, Guitar Chug/Pinch, Pitch Pipe Distressed/Note, Synth Big/Buzz/High, Warhorn |
+| War2 | 12 | Abstract Whoosh, Choir, Construction, Magic Chimes, Pig Squeal, Saws, Seal, Slow, Smith, Synth Stinger, Trumpet Rally, Zippy Magic |
+| War3 | 12 | Bell, Crunchy Bell, Drum Splash, Error, Fanfare, Gate Open, Gold, Magic Shimmer, Ringout, Rooster, Shimmer Bell, Wolf Howl |
+| TTS | 1 | Text-to-Speech (reads spell name via `TextToSpeechFrame_PlayCooldownAlertMessage`) |
+
+Each sound entry maps to a `soundKitID` which is played via `PlaySound()`.
+
+**IMPORTANT:** The `CooldownViewerSound` enum values must never be changed -- they are persisted in saved layout data. New sounds should only be appended.
+
+### Visual Alerts
+
+**10 visual types** in 2 families, each with 5 color variants:
+
+| Visual Type | Template | Color | Hex |
+|-------------|----------|-------|-----|
+| MarchingAnts | `CDMVISMarchingAntsBase` | Gold | #FFD700 |
+| MarchingAntsCyan | `CDMVISMarchingAntsCyan` | Cyan | #3FBFD4 |
+| MarchingAntsRed | `CDMVISMarchingAntsRed` | Red | #CA1A1A |
+| MarchingAntsGreen | `CDMVISMarchingAntsGreen` | Green | #4DAF63 |
+| MarchingAntsBlue | `CDMVISMarchingAntsBlue` | Blue | #3F6EC7 |
+| Flash | `CDMVISFlashBase` | Gold | #FFD700 |
+| FlashCyan | `CDMVISFlashCyan` | Cyan | #3FBFD4 |
+| FlashRed | `CDMVISFlashRed` | Red | #CA1A1A |
+| FlashGreen | `CDMVISFlashGreen` | Green | #4DAF63 |
+| FlashBlue | `CDMVISFlashBlue` | Blue | #3F6EC7 |
+
+All visual alerts have a **2-second duration** and are managed by a pool-based system (`CooldownViewerVisualAlertsManager`). MarchingAnts use a flipbook animation (30 frames, 6x5 grid, 1s per cycle). Flash uses a bouncing alpha animation (0.25 to 1.0, 0.5s per half-cycle).
+
+The visual alerts inherit from `AnimateWhileShownTemplate` and are anchored to the target item frame with an 8px expansion on each side.
+
+### TTS
+
+Text-to-speech uses `TextToSpeechFrame_PlayCooldownAlertMessage(alert, formattedName, allowOverlappedSpeech)` with the spell name. Overlapped speech is enabled so multiple alerts can play simultaneously.
+
+---
+
+## Layout System
+
+### Layout Object Structure
+
+A layout is a plain Lua table created by `CooldownManagerLayout_Create`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `layoutID` | number | Unique identifier (0 = default layout, never stored) |
+| `layoutName` | string | User-assigned name (nil/empty = auto-generated from class+spec) |
+| `classAndSpecTag` | number | Encoded as `classID * 10 + specIndex` |
+| `orderedCooldownIDs` | table | Ordered list of all cooldown IDs for this spec |
+| `cooldownInfo` | table | Per-cooldown overrides: `{ [cooldownID] = { category = ..., alerts = {...} } }` |
+| `isDefault` | bool | True if this is an auto-created "starter" layout |
+
+### Per-Character, Per-Spec Storage
+
+The class+spec tag is encoded as: `classID * 10 + specIndex` (e.g., Warrior Arms = `11`, Mage Frost = `83`). This limits spec indices to single digits (0-9), which is validated at runtime.
+
+### Layout Limits
+
+- Maximum **5 layouts** per character (not yet fully enforced in the code, marked as TODO)
+- The **default layout ID** is `0` and represents "no custom layout" -- it is never stored
+
+### CooldownManagerLayout_* Helper Functions
+
+| Function | Description |
+|----------|-------------|
+| `CooldownManagerLayout_Create(id, name, tag)` | Create a new layout object |
+| `CooldownManagerLayout_GetID(layout)` | Get layout ID |
+| `CooldownManagerLayout_GetType(layout)` | Always returns `Character` (for now) |
+| `CooldownManagerLayout_GetName(layout)` | Get display name (explicit or auto-generated) |
+| `CooldownManagerLayout_GetNameExplicit(layout)` | Get explicit name only (nil if auto-generated) |
+| `CooldownManagerLayout_SetName(layout, name)` | Set the layout name |
+| `CooldownManagerLayout_GetClassAndSpecTag(layout)` | Get the class+spec tag |
+| `CooldownManagerLayout_GetOrderedCooldownIDs(layout)` | Get ordered cooldown ID list |
+| `CooldownManagerLayout_SetOrderedCooldownIDs(layout, ids)` | Set ordered cooldown ID list |
+| `CooldownManagerLayout_GetCooldownInfo(layout, allowCreate)` | Get per-cooldown override table |
+| `CooldownManagerLayout_IsDefaultLayout(layout)` | Check if auto-created starter layout |
+| `CooldownManagerLayout_SetIsDefault(layout, isDefault)` | Set default flag |
+
+### Layout Manager CRUD Operations
+
+`CooldownViewerLayoutManagerMixin` provides:
+
+| Operation | Method | Description |
+|-----------|--------|-------------|
+| Create | `AddLayout(name, specTag, desiredID)` | Add a new layout, auto-assigns ID if needed |
+| Read | `GetLayout(id)` / `GetLayoutByName(name, specTag)` | Retrieve a layout |
+| Update | `WriteCooldownInfo_Category(info, category)` | Update a cooldown's category |
+| Delete | `RemoveLayout(id)` | Remove a layout and clear active state |
+| List | `EnumerateLayouts()` | Iterate all layouts |
+| Activate | `SetActiveLayout(layout)` / `SetActiveLayoutByID(id)` | Set the current layout |
+| Import | `ImportLayout(name, layout)` | Import a copied layout |
+| Copy | `CopyLayout(layout)` | Deep-copy with new ID |
+
+### Undo Support
+
+`CooldownViewerSettingsDataProviderMixin:ResetToRestorePoint()` reverts to the last saved state. The layout manager's `CreateRestorePoint` / `ResetToRestorePoint` pattern is used by the settings UI to allow "Revert Changes" via a `StaticPopupDialog`.
+
+### Import/Export
+
+Layouts can be exported to a string via `SerializeLayouts(singleLayoutID)` and imported via `DeserializeLayouts(serializedData, isUserInput)`. The import flow:
+
+1. User pastes serialized string into import dialog
+2. `ProcessImportText` deserializes and creates temporary layouts
+3. Layouts are deleted from the manager (cached in dialog)
+4. User names the layout and confirms
+5. `ImportLayout` adds the layout with the chosen name
+
+---
+
+## Serialization
+
+### Wire Format
+
+```
+<encodingVersion>|<encodedPayload>
+```
+
+The pipe character (`|`) separates the encoding version from the encoded data.
+
+### Encoding Pipeline
+
+```
+Lua Table  -->  CBOR  -->  Deflate  -->  Base64  -->  String
+                (C_EncodingUtil.SerializeCBOR)
+                          (C_EncodingUtil.CompressString, Deflate)
+                                        (C_EncodingUtil.EncodeBase64)
+```
+
+Decoding reverses the pipeline: Base64 decode, Deflate decompress, CBOR deserialize.
+
+### Data Format v4 Structure
+
+The CBOR payload deserializes to a Lua table with these field IDs:
+
+| Field ID | Key | Description |
+|----------|-----|-------------|
+| 1 | `SAVE_FIELD_ID_VERSION` | Data format version (currently 4) |
+| 2 | `SAVE_FIELD_ID_ACTIVE_LAYOUT_NAMES` | `{ [specTag] = layoutID }` mapping |
+| 3 | `SAVE_FIELD_ID_LAYOUTS` | `{ [specTag] = { [layoutID] = layoutData } }` |
+| 4 | `SAVE_FIELD_ID_LAYOUT_ID_DATA` | `{ [layoutID] = layoutName }` mapping |
+
+Each `layoutData` contains:
+
+| Field ID | Key | Description |
+|----------|-----|-------------|
+| 1 | `SAVE_FIELD_ID_COOLDOWN_ORDER` | Ordered list of cooldown IDs |
+| 2 | `SAVE_FIELD_ID_CATEGORY_OVERRIDES` | `{ [category] = { cooldownID, ... } }` |
+| 3 | `SAVE_FIELD_ID_ALERT_OVERRIDES` | `{ [cooldownID] = { alert, ... } }` |
+
+### Version History
+
+| Version | Changes |
+|---------|---------|
+| v1 | Initial format. Active layout determined per-layout (last written = active). |
+| v2 | Added explicit `ACTIVE_LAYOUT_NAMES` field. `specTag -> layoutName` mapping. |
+| v3 | Added `ALERT_OVERRIDES` field for per-cooldown alert configurations. |
+| v4 | Changed active layout tracking from name-based to ID-based. Added `LAYOUT_ID_DATA` for name storage. Layouts keyed by ID instead of name. |
+
+### Persistence
+
+Layout data is stored in the WoW account data system:
+
+- `C_CooldownViewer.GetLayoutData()` reads from account data
+- `C_CooldownViewer.SetLayoutData(data)` writes to account data
+
+The `AccountData` enum entries are:
+- `CooldownManager` (17)
+- `CooldownManager2` (18)
+
+The serialization layer supports pluggable persistence objects (any object implementing `SetSerializedData`, `GetSerializedData`, `ClearSerializedData`), but defaults to the C_CooldownViewer APIs.
+
+---
+
+## Settings UI
+
+### Frame Structure
+
+The settings frame (`CooldownViewerSettings`) uses `ButtonFrameTemplate` with a size of **399x609** pixels. It is registered as a UI panel via `SetUIPanelAttribute`.
+
+### Tabs
+
+| Tab | Content |
+|-----|---------|
+| **Spells** | Essential + Utility cooldowns, Hidden Spells |
+| **Auras** | Tracked Buff + Tracked Bar, Hidden Auras |
+
+### Display Categories
+
+Six display categories shown as collapsible containers:
+
+1. **Essential** -- Major cooldowns
+2. **Utility** -- Minor cooldowns
+3. **Tracked Buffs** -- Self-buff icons
+4. **Tracked Bars** -- Self-buff bars
+5. **Not in Bar (Spells)** -- Hidden spell pseudo-category
+6. **Not in Bar (Auras)** -- Hidden aura pseudo-category
+
+### Search Filtering
+
+A search box filters cooldowns by name. Results are matched against `C_Spell.GetSpellName(spellID)` and the `cooldownViewerShowUnlearned` CVar controls whether unlearned spells are included.
+
+### Drag-and-Drop Reordering
+
+The settings UI supports drag-and-drop between categories:
+
+1. `OnMouseDown` starts drag, creates a cursor icon frame (`CooldownViewerSettingsDraggedItemTemplate`)
+2. `OnEnter` of target items triggers reorder marker display
+3. `OnMouseUp` calls `ChangeOrderIndex(source, dest, reorderOffset)` on the data provider
+4. Category changes happen automatically when dragging between categories
+
+### Context Menu
+
+Right-clicking a cooldown item opens a context menu with:
+
+- **Move to [Category]** -- reassign to a different viewer category
+- **Add Alert** -- opens the alert configuration panel
+- **Edit Alert** / **Remove Alert** -- for existing alerts
+
+### Alert Configuration Dialog
+
+The alert editing panel (`CooldownViewerSettingsEditAlertMixin`) attaches to the right side of the settings frame with three dropdowns:
+
+1. **Type** -- Sound or Visual
+2. **When** -- Available, Pandemic Time, On Cooldown, Charge Gained (filtered by valid types for the cooldown)
+3. **Payload** -- Specific sound or visual effect (Sound dropdown has nested sub-menus by category, with sample play buttons)
+
+### Layout Management
+
+A dropdown at the top of the settings frame manages layouts:
+
+- **Use Default** -- deactivate all custom layouts
+- **Switch Layout** -- select from existing layouts
+- **New Layout** / **Rename** / **Delete**
+- **Import** / **Export** -- clipboard-based serialized data
+- **Revert Changes** -- undo to last saved state
+- **Reset to Default** -- delete the active layout
+
+---
+
+## Viewer Frame Templates
+
+### Four Viewer Frames
+
+| Frame Name | Mixin | Item Template | Icon Size | Category | EditMode Index | UIParentBottomManaged | Layout Index |
+|-----------|-------|---------------|-----------|----------|---------------|-----------------------|-------------|
+| `EssentialCooldownViewer` | `EssentialCooldownViewerMixin` | `CooldownViewerEssentialItemTemplate` | 50x50 | Essential | `Enum.EditModeCooldownViewerSystemIndices.Essential` | Yes | 10 |
+| `UtilityCooldownViewer` | `UtilityCooldownViewerMixin` | `CooldownViewerUtilityItemTemplate` | 30x30 | Utility | `Enum.EditModeCooldownViewerSystemIndices.Utility` | Yes | 11 |
+| `BuffIconCooldownViewer` | `BuffIconCooldownViewerMixin` | `CooldownViewerBuffIconItemTemplate` | 40x40 | TrackedBuff | `Enum.EditModeCooldownViewerSystemIndices.BuffIcon` | Yes | 9 |
+| `BuffBarCooldownViewer` | `BuffBarCooldownViewerMixin` | `CooldownViewerBuffBarItemTemplate` | 220x30 | TrackedBar | `Enum.EditModeCooldownViewerSystemIndices.BuffBar` | No | *(none)* |
+
+All viewers inherit `CooldownViewerTemplate` which itself inherits `EditModeCooldownViewerSystemTemplate` and `GridLayoutFrame`. All have `ignoreInLayoutWhenActionBarIsOverriden = true` (except BuffBar which does not use UIParentBottomManaged).
+
+### Item Template Details
+
+**Essential Item** (`CooldownViewerEssentialItemTemplate`, 50x50):
+- Icon with `UI-HUD-CoolDownManager-Mask` mask
+- `UI-HUD-CoolDownManager-IconOverlay` frame overlay (-9,+8 / +9,-8)
+- Out-of-range overlay (`UI-CooldownManager-OORshadow`, 50% alpha)
+- Cooldown frame with custom swipe texture (`UI-HUD-CoolDownManager-Icon-Swipe`)
+- Charge count (bottom-right, `NumberFontNormal`)
+- Cooldown flash flipbook animation (22 frames, 0.75s)
+- Countdown font: `GameFontHighlightHugeOutline`
+
+**Utility Item** (`CooldownViewerUtilityItemTemplate`, 30x30):
+- Same structure as Essential but smaller
+- Overlay offset: -6,+5 / +6,-5
+- Countdown font: `GameFontHighlightOutline`
+- Charge count uses `NumberFontNormalSmall`
+
+**Buff Icon Item** (`CooldownViewerBuffIconItemTemplate`, 40x40):
+- Icon with mask and overlay (-8,+7 / +8,-7)
+- **Reverse** cooldown swipe (fills up instead of draining)
+- Swipe color: black at 70% alpha (vs white at 100% for cooldown items)
+- Debuff border frame (`CooldownViewerItemDebuffBorderTemplate`)
+- Applications count (bottom-right, `NumberFontNormal`)
+- `allowHideWhenInactive = true` (hides when no active aura)
+
+**Buff Bar Item** (`CooldownViewerBuffBarItemTemplate`, 220x30):
+- Icon frame (30x30) at left with mask and overlay
+- Debuff border frame
+- Applications count on icon (bottom-right, `NumberFontNormalSmall`)
+- StatusBar with `UI-HUD-CoolDownManager-Bar` atlas, default color `(1.0, 0.5, 0.25)`
+- Background: `UI-HUD-CoolDownManager-Bar-BG`
+- Pip texture: `UI-HUD-CoolDownManager-Bar-Pip` anchored to bar fill right edge
+- Name font string (left-aligned, `NumberFontNormal`)
+- Duration font string (right-aligned, `NumberFontNormal`, format: `COOLDOWN_DURATION_SEC`)
+- `allowHideWhenInactive = true`
+- StatusBar frame level: 511, Icon frame level: 512
+
+---
+
+## Pandemic Alert Animation
+
+### Icon Pandemic (`CooldownPandemicFXTemplate`)
+
+Used by Essential, Utility, and Buff Icon viewers.
+
+- Inherits `AnimateWhileShownTemplate`
+- Contains a `Border` frame with `UI-CooldownManager-PandemicBorder` atlas
+- Contains an `FX` frame with 3 overlapping pulse textures:
+  - `UI-CooldownManager-PandemicFX-Icon01`
+  - `UI-CooldownManager-PandemicFX-Icon02`
+  - `UI-CooldownManager-PandemicFX-Icon03`
+- All 3 textures masked by `UI-CooldownManager-PandemicBorder-Mask`
+- Animation: **looping REPEAT**, 2-second total cycle per texture, staggered by 1.5s:
+  - Scale from 0.25 to 1.5 over 2s with IN_OUT smoothing
+  - Alpha: 0 to 1 (0.5s), hold at 1 (1s), 1 to 0 (0.5s)
+- Anchored to item with -6,+6 / +6,-6 offset
+
+### Bar Pandemic (`CooldownPandemicBarFXTemplate`)
+
+Used by Buff Bar viewer.
+
+- Border frame with `UI-CooldownManager-PandemicBorderBar` atlas
+- Single rotating texture: `UI-CooldownManager-PandemicFX-Bar`
+  - Oversized: anchored at -256,+95 / +251,-199 relative to parent
+  - Masked by `UI-CooldownManager-PandemicBorderBar-Mask`
+- Animation: **looping REPEAT**, 360-degree rotation over **5 seconds**
+- Anchored to bar with -9,+10 / +9,-10 offset, frame level = bar level + 1
+
+---
+
+## CooldownFrame Widget API
+
+The `Cooldown` frame type is a specialized frame widget that displays radial cooldown animations. For full secret value implications, see [Secret Safe APIs](12a_Secret_Safe_APIs.md) and [API Migration Guide](12_API_Migration_Guide.md).
+
+### Setting Cooldown Values
+
+| Method | Parameters | SecretArguments | Description |
+|--------|-----------|----------------|-------------|
+| `SetCooldown` | `start`, `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1** from tainted code with secret values. Set cooldown by start time and duration. |
+| `SetCooldownDuration` | `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1.** Set cooldown by duration only. |
+| `SetCooldownFromExpirationTime` | `expirationTime`, `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1.** Set cooldown by expiration time. |
+| `SetCooldownUNIX` | `start`, `duration`, `modRate=1` | AllowedWhenTainted (adds Cooldown aspect) | **RESTRICTED in 12.0.1.** Set cooldown using UNIX timestamps. |
+| `SetCooldownFromDurationObject` | `duration` (LuaDurationObject), `clearIfZero=true` | AllowedWhenUntainted | **SAFE alternative** that accepts Duration objects from `C_Spell.GetSpellCooldownDuration()` or `C_DurationUtil.CreateDuration()`. This is the ONLY method usable from tainted code for displaying cooldowns with secret values. |
+
+### Reading Cooldown Values (Secret-Returning)
+
+| Method | Returns | Secret Aspect | Description |
+|--------|---------|--------------|-------------|
+| `GetCooldownDisplayDuration` | `duration` (ms, unaffected by modRate) | Cooldown | May return secret value |
+| `GetCooldownDuration` | `duration` (ms, multiplied by modRate) | Cooldown | May return secret value |
+| `GetCooldownTimes` | `start`, `duration` | Cooldown | Both may be secret |
+
+### Non-Secret Getters
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `GetCountdownFontString` | SimpleFontString | The countdown text FontString |
+| `GetDrawBling` | bool | Whether bling animation plays on completion |
+| `GetDrawEdge` | bool | Whether the sweeping edge is drawn |
+| `GetDrawSwipe` | bool | Whether the swipe overlay is drawn |
+| `GetEdgeScale` | number | Scale of the edge texture |
+| `GetHideCountdownNumbers` | bool | Whether countdown numbers are hidden |
+| `GetMinimumCountdownDuration` | number (ms) | Minimum duration to show countdown text |
+| `GetReverse` | bool | Whether swipe direction is reversed |
+| `GetRotation` | number (radians) | Rotation offset |
+| `GetUseAuraDisplayTime` | bool | Whether to use aura-specific display timing |
+| `IsPaused` | bool | Whether the cooldown is paused |
+
+### Control Methods
+
+| Method | Parameters | Description |
+|--------|-----------|-------------|
+| `Clear` | *(none)* | Remove the cooldown display |
+| `Pause` | *(none)* | Pause the cooldown animation |
+| `Resume` | *(none)* | Resume a paused cooldown |
+
+### Appearance Methods
+
+All appearance setters have `SecretArguments = "AllowedWhenUntainted"`:
+
+| Method | Parameters | Description |
+|--------|-----------|-------------|
+| `SetBlingTexture` | texture, r, g, b, a | Set the completion bling texture |
+| `SetCountdownAbbrevThreshold` | seconds | Threshold for abbreviated countdown text |
+| `SetCountdownFont` | fontName | Set the countdown font |
+| `SetDrawBling` | bool | Enable/disable bling animation |
+| `SetDrawEdge` | bool | Enable/disable sweeping edge |
+| `SetDrawSwipe` | bool | Enable/disable swipe overlay |
+| `SetEdgeColor` | r, g, b, a? | Set edge color |
+| `SetEdgeScale` | scale | Set edge texture scale |
+| `SetEdgeTexture` | texture, r, g, b, a | Set edge texture |
+| `SetHideCountdownNumbers` | bool | Show/hide countdown numbers |
+| `SetMinimumCountdownDuration` | ms | Minimum total duration to show countdown |
+| `SetPaused` | bool | Pause/resume |
+| `SetReverse` | bool | Reverse swipe direction |
+| `SetRotation` | radians | Rotate the cooldown display |
+| `SetSwipeColor` | r, g, b, a? | Set swipe color |
+| `SetSwipeTexture` | texture, r, g, b, a | Set swipe texture |
+| `SetTexCoordRange` | low (Vector2D), high (Vector2D) | Set texture coordinate range |
+| `SetUseAuraDisplayTime` | bool | Toggle aura display timing |
+| `SetUseCircularEdge` | bool | Use circular edge shape |
+
+### Utility Functions
+
+| Function | Parameters | Description |
+|----------|-----------|-------------|
+| `CooldownFrame_Set` | `self`, `start`, `duration`, `enable`, `forceShowDrawEdge`, `modRate` | Convenience wrapper: if enabled and start/duration > 0, calls `SetCooldown`; otherwise calls `CooldownFrame_Clear` |
+| `CooldownFrame_Clear` | `self` | Calls `self:Clear()` |
+| `CooldownFrame_SetDisplayAsPercentage` | `self`, `percentage` | Pauses the cooldown and sets it to display a static percentage (0-1) |
+
+---
+
+## Addon Integration Patterns
+
+### Querying Available Cooldowns
+
+```lua
+-- Check if the system is available
+local isAvailable, failureReason = C_CooldownViewer.IsCooldownViewerAvailable();
+if not isAvailable then
+    -- failureReason explains why (e.g., character level too low)
+    return;
+end
+
+-- Get all Essential cooldowns for the current spec
+local essentialIDs = C_CooldownViewer.GetCooldownViewerCategorySet(
+    Enum.CooldownViewerCategory.Essential,
+    false  -- only learned spells
+);
+
+for _, cooldownID in ipairs(essentialIDs) do
+    local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID);
+    if info then
+        local spellName = C_Spell.GetSpellName(info.spellID);
+        local texture = C_Spell.GetSpellTexture(info.spellID);
+        -- Use cooldownID, spellName, texture...
+    end
+end
+```
+
+### Getting Cooldown Info for a Specific Spell
+
+```lua
+-- You need the cooldownID, not the spellID
+-- Search through all categories to find it
+local function FindCooldownIDForSpell(targetSpellID)
+    local categories = {
+        Enum.CooldownViewerCategory.Essential,
+        Enum.CooldownViewerCategory.Utility,
+        Enum.CooldownViewerCategory.TrackedBuff,
+        Enum.CooldownViewerCategory.TrackedBar,
+    };
+    
+    for _, category in ipairs(categories) do
+        local cooldownIDs = C_CooldownViewer.GetCooldownViewerCategorySet(category, true);
+        for _, cooldownID in ipairs(cooldownIDs) do
+            local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID);
+            if info and info.spellID == targetSpellID then
+                return cooldownID, info;
+            end
+        end
+    end
+    return nil;
+end
+```
+
+### Working with Layout Data
+
+```lua
+-- Read the raw serialized layout data
+local rawData = C_CooldownViewer.GetLayoutData();
+
+-- The data is in the format: "encodingVersion|base64EncodedCBOR"
+-- To decode: Base64 -> Deflate decompress -> CBOR deserialize
+-- Use C_EncodingUtil APIs:
+local delimiterIndex = string.find(rawData, "|", 1, true);
+if delimiterIndex then
+    local payload = string.sub(rawData, delimiterIndex + 1);
+    local decoded = C_EncodingUtil.DecodeBase64(payload);
+    local inflated = C_EncodingUtil.DecompressString(decoded, Enum.CompressionMethod.Deflate);
+    local dataTable = C_EncodingUtil.DeserializeCBOR(inflated);
+    -- dataTable now contains the layout structure
+end
+```
+
+### Working with CooldownFrame Safely (Secret Values)
+
+In WoW 12.0.1+, the standard `SetCooldown`, `SetCooldownDuration`, `SetCooldownFromExpirationTime`, and `SetCooldownUNIX` methods are **restricted** when called from tainted (addon) code with secret values. Use `SetCooldownFromDurationObject` instead.
+
+```lua
+-- SAFE: Using Duration Objects (12.0.1+)
+local function SetupCooldownDisplay(cooldownFrame, spellID)
+    -- Get a Duration object (not a raw number)
+    local durationObj = C_Spell.GetSpellCooldownDuration(spellID);
+    if durationObj then
+        cooldownFrame:SetCooldownFromDurationObject(durationObj);
+    else
+        cooldownFrame:Clear();
+    end
+end
+
+-- For item cooldowns (no native Duration API), synthesize manually:
+local function SetupItemCooldown(cooldownFrame, startTime, duration, modRate)
+    local dur = C_DurationUtil.CreateDuration();
+    dur:SetTimeFromStart(startTime, duration, modRate);
+    cooldownFrame:SetCooldownFromDurationObject(dur);
+end
+
+-- UNSAFE in 12.0.1+ (will error with secret values from tainted code):
+-- cooldownFrame:SetCooldown(start, duration, modRate)
+-- CooldownFrame_Set(cooldownFrame, start, duration, enable, drawEdge, modRate)
+```
+
+See [Secret Safe APIs](12a_Secret_Safe_APIs.md) for comprehensive secret value handling patterns and [Advanced Techniques](10_Advanced_Techniques.md) for more complex cooldown display scenarios.
+
+### Creating a Private Cooldown Frame
+
+```lua
+-- Create a Cooldown frame programmatically
+local myFrame = CreateFrame("Frame", nil, UIParent);
+myFrame:SetSize(50, 50);
+myFrame:SetPoint("CENTER");
+
+local icon = myFrame:CreateTexture(nil, "ARTWORK");
+icon:SetAllPoints();
+
+local cooldown = CreateFrame("Cooldown", nil, myFrame, "CooldownFrameTemplate");
+cooldown:SetAllPoints();
+cooldown:SetDrawEdge(false);
+cooldown:SetDrawBling(true);
+cooldown:SetHideCountdownNumbers(false);
+
+-- Use Duration objects for secret-safe cooldown display
+local function UpdateCooldown(spellID)
+    local durationObj = C_Spell.GetSpellCooldownDuration(spellID);
+    if durationObj then
+        cooldown:SetCooldownFromDurationObject(durationObj);
+    else
+        cooldown:Clear();
+    end
+    
+    local texture = C_Spell.GetSpellTexture(spellID);
+    icon:SetTexture(texture);
+end
+```
+
+---
+
+## Key Blizzard Source Files Reference
+
+All paths are relative to `Interface/AddOns/Blizzard_CooldownViewer/` within the Blizzard UI source.
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `Blizzard_CooldownViewer.toc` | 27 | TOC: load order, dependencies, retail-only restriction |
+| `CooldownViewerSettingsConstants.lua` | 140 | Enums (CooldownViewerSound, CooldownViewerVisual), pseudo-categories, CDMLayoutMode |
+| `CooldownViewerUtil.lua` | 53 | Class+spec tag encoding/decoding, `IsDisabledCategory` helper |
+| `CooldownViewerVisualAlert.lua` | 84 | `CooldownViewerVisualAlertMixin`: alert target, anchoring, priority |
+| `CooldownViewerVisualAlertTemplates.lua` | 65 | `CDMVISBaseMixin`, `CDMVISMarchingAntsBaseMixin`, `CDMVISFlashBaseMixin`: vertex color, duration, anchors |
+| `CooldownViewerVisualAlertTemplates.xml` | 88 | XML templates for all 10 visual alert variants (5 MarchingAnts + 5 Flash) |
+| `CooldownViewerVisualAlertsManager.lua` | 32 | `CooldownViewerVisualAlertsManagerMixin`: pool-based alert acquire/release |
+| `CooldownViewerVisualAlertsManager.xml` | 8 | XML frame for `CooldownViewerVisualAlertsManager` singleton |
+| `CooldownViewerVisualAlertTarget.lua` | 58 | `CooldownViewerVisualAlertTargetMixin`: alert container, sorting, frame level management |
+| `CooldownViewerSoundAlertData.lua` | 87 | 67 sound entries across 6 categories with soundKitIDs |
+| `CooldownViewerVisualAlertData.lua` | 14 | 10 visual alert entries mapping enums to animation templates |
+| `CooldownViewerAlert.lua` | 254 | Alert data structure (3-field array), play dispatch (sound/visual/TTS), status validation |
+| `CooldownViewerSettingsAlerts.lua` | 220 | `CooldownViewerSettingsEditAlertMixin`: 3-dropdown alert config panel, add/edit logic |
+| `CooldownViewerSettingsAlerts.xml` | 88 | XML for the alert editing panel UI |
+| `CooldownViewerSettingsDataStoreSerialization.lua` | 443 | `CooldownViewerDataStoreSerializationMixin`: CBOR/Deflate/Base64, v1-v4 migration readers |
+| `CooldownViewerSettingsLayoutManager.lua` | 978 | `CooldownViewerLayoutManagerMixin`: CRUD, undo, import/export, alert/category management |
+| `CooldownViewerSettingsDataProvider.lua` | 342 | `CooldownViewerSettingsDataProviderMixin`: display data build, category filtering, reorder |
+| `CooldownViewerItemData.lua` | 471 | `CooldownViewerItemDataMixin`: spell ID resolution, aura/totem data, tooltip, alert types |
+| `CooldownViewerSettingsDialogs.lua` | 58 | `CooldownViewerBaseDialogMixin`, `CooldownViewerImportLayoutDialogMixin`: import/export dialogs |
+| `CooldownViewerSettingsDialogs.xml` | 14 | XML for settings dialog frames |
+| `CooldownViewerSettings.lua` | 1717 | Main settings UI: tabs, search, drag-drop reordering, category containers, context menus |
+| `CooldownViewerSettings.xml` | 261 | XML for settings frame (399x609, ButtonFrameTemplate, tab bar) |
+| `CooldownViewer.lua` | 2043 | Core: all item/viewer mixins, cooldown caching, GCD detection, range check, icon coloring |
+| `PandemicAlertAnimation.xml` | 82 | Pandemic animation templates (icon pulse 3-texture, bar rotation) |
+| `CooldownViewer.xml` | 334 | XML: 4 viewer frames, 4 item templates, debuff border template |
+
+### Related Files Outside the Addon
+
+| File | Description |
+|------|-------------|
+| `Blizzard_APIDocumentationGenerated/CooldownViewerDocumentation.lua` | C_CooldownViewer API documentation |
+| `Blizzard_APIDocumentationGenerated/CooldownViewerConstantsDocumentation.lua` | Enum definitions |
+| `Blizzard_APIDocumentationGenerated/EditModeManagerConstantsDocumentation.lua` | Edit Mode enums (VisibleSetting, BarContent, etc.) |
+| `Blizzard_APIDocumentationGenerated/FrameAPICooldownDocumentation.lua` | CooldownFrame widget API |
+| `Blizzard_FrameXMLUtil/Cooldown.lua` | `CooldownFrame_Set`, `CooldownFrame_Clear`, `CooldownFrame_SetDisplayAsPercentage` |

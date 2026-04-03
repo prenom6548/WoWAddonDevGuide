@@ -8,7 +8,7 @@ This comprehensive knowledge base contains **everything** you need to create, de
 ## ✨ What's Included
 <!-- CLAUDE_SKIP_END -->
 
-### Complete Documentation (14 Guides + Quick Start)
+### Complete Documentation (15 Guides + Quick Start)
 - ✅ **[00_MASTER_PROMPT.md](00_MASTER_PROMPT.md)** - Master overview and entry point
 - ✅ **[01_API_Reference.md](01_API_Reference.md)** - WoW API functions organized by category
 - ✅ **[02_Event_System.md](02_Event_System.md)** - Complete event system documentation
@@ -22,7 +22,8 @@ This comprehensive knowledge base contains **everything** you need to create, de
 - ✅ **[10_Advanced_Techniques.md](10_Advanced_Techniques.md)** - Production-level patterns (cross-client, performance, multi-addon) ⭐
 - ✅ **[11_Housing_System_Guide.md](11_Housing_System_Guide.md)** - Housing system APIs and development patterns ⭐
 - ✅ **[12_API_Migration_Guide.md](12_API_Migration_Guide.md)** - API version migration, compatibility wrappers, update strategies ⭐
-- ✅ **[12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md)** - Complete 12.0+ secret values API reference ⭐ NEW!
+- ✅ **[12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md)** - Complete 12.0+ secret values API reference ⭐
+- ✅ **[13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md)** - Cooldown Viewer system: C_CooldownViewer API, alerts, layout, CooldownFrame widget ⭐ NEW!
 - ✅ **[QUICK_START_GUIDE.md](QUICK_START_GUIDE.md)** - Get started in 5 minutes ⭐
 
 ### Reference Data
@@ -78,6 +79,7 @@ This comprehensive knowledge base contains **everything** you need to create, de
 | **10_Advanced_Techniques.md** | Cross-client, event bucketing, profiling, multi-addon | Production-level addons |
 | **11_Housing_System_Guide.md** | Housing APIs, furniture, decoration | Building housing addons |
 | **12_API_Migration_Guide.md** | Version upgrades, API changes, compatibility | Updating for new patches |
+| **13_Cooldown_Viewer_Guide.md** | Cooldown Viewer API, alerts, CooldownFrame widget | Building cooldown tracking addons |
 
 ### API Reference
 | File | Topics | When to Read |
@@ -207,7 +209,9 @@ WoW_Addon_Dev_Knowledge_Base/
 ├── 09_Addon_Libraries_Guide.md ⭐
 ├── 10_Advanced_Techniques.md ⭐
 ├── 11_Housing_System_Guide.md ⭐
-└── 12_API_Migration_Guide.md ⭐
+├── 12_API_Migration_Guide.md ⭐
+├── 12a_Secret_Safe_APIs.md ⭐
+└── 13_Cooldown_Viewer_Guide.md ⭐
 ```
 <!-- CLAUDE_SKIP_END -->
 
@@ -383,7 +387,7 @@ This knowledge base includes:
 <!-- CLAUDE_SKIP_START -->
 1. **New Developer?** → Start with [QUICK_START_GUIDE.md](QUICK_START_GUIDE.md)
 2. **Need specific feature?** → Use the "I want to..." section above
-3. **Want deep knowledge?** → Read all 13 guides in order ([00_MASTER_PROMPT.md](00_MASTER_PROMPT.md) through [12_API_Migration_Guide.md](12_API_Migration_Guide.md))
+3. **Want deep knowledge?** → Read all 15 guides in order ([00_MASTER_PROMPT.md](00_MASTER_PROMPT.md) through [12_API_Migration_Guide.md](12_API_Migration_Guide.md))
 4. **Ready to code?** → Reference guides as needed while building
 
 ---
@@ -395,7 +399,7 @@ This knowledge base includes:
 **Interface Version:** 120001
 **Last Updated:** 2026-03-28
 **Files Analyzed:** 3,417 Blizzard UI files + 21,514 community addon files
-**Documentation Files:** 13 comprehensive guides
+**Documentation Files:** 15 comprehensive guides
 
 ---
 

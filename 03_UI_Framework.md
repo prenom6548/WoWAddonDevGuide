@@ -769,6 +769,8 @@ local minDuration = cooldown:GetMinimumCountdownDuration()
 cooldown:SetMinimumCountdownDuration(3)  -- Only show countdown for 3+ seconds
 ```
 
+> **See also:** [Cooldown Viewer Guide](13_Cooldown_Viewer_Guide.md) for the Blizzard Cooldown Viewer system that uses these methods.
+
 ### TextureBase Methods
 
 ```lua

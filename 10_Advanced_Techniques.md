@@ -161,6 +161,8 @@ local function UpdateCooldownDisplay(cooldownFrame, spellID)
 end
 ```
 
+> **See also:** [Cooldown Viewer Guide](13_Cooldown_Viewer_Guide.md#cooldownframe-widget-api) for complete CooldownFrame API reference and [Secret Safe APIs](12a_Secret_Safe_APIs.md) for duration object patterns.
+
 ### Pattern: Safe Serialization
 
 ```lua

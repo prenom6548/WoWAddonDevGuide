@@ -212,6 +212,8 @@ C_Spell.IsPriorityAura(spellID)              -- Priority aura check
 C_Spell.IsSelfBuff(spellID)                  -- Self-buff check
 ```
 
+> **See also:** [Cooldown Viewer Guide](13_Cooldown_Viewer_Guide.md) for the complete Cooldown Viewer/Manager system reference.
+
 **C_SpellBook Namespace (11.2.0+)**:
 ```lua
 -- Replaces IsSpellKnown()
@@ -695,6 +697,8 @@ print("Debug: " .. safeInfo.targetHealth)  -- Will show "[SECRET]" if protected
 - `string.format` precision specifiers (`"%.1s"`) restricted with secret strings
 - `ActionButton_ApplyCooldown` secure delegate removed (throws errors with secrets)
 - Cooldown aura spells baked into API results (obsoletes `C_UnitAuras.GetCooldownAuraBySpellID`)
+
+> **See also:** [Cooldown Viewer Guide](13_Cooldown_Viewer_Guide.md#cooldownframe-widget-api) for complete CooldownFrame API reference including secret value annotations.
 
 ---
 

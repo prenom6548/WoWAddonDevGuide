@@ -1790,6 +1790,8 @@ LoC cooldown APIs have been **renamed with an "Info" suffix** (e.g., `GetSpellLo
 | `C_LossOfControl.GetActiveLossOfControlDuration(unitToken, index)` | Duration object | LoC duration for cooldown display |
 | `GetTotemDuration(slot)` | Duration object | Totem duration for cooldown display |
 
+> **See also:** [Cooldown Viewer Guide](13_Cooldown_Viewer_Guide.md) for the Blizzard Cooldown Viewer system and safe cooldown display patterns.
+
 **`UnitCreatureID` Returns Nil for Secret Identity:**
 
 `UnitCreatureID()` now returns `nil` when the unit's identity is secret, rather than returning a secret value.
