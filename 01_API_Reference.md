@@ -421,20 +421,24 @@ C_CombatLog.ClearCombatLog()
 C_CombatLog.SetCombatLogFilterEnabled(filterIndex, enabled)
 ```
 
-### C_DamageMeter - Official Damage Meter API
-Blizzard's official damage meter support for addons.
+### C_DamageMeter - Official Damage Meter API (12.0.0)
+Blizzard's official damage meter data. Data-retrieval functions have `SecretArguments = "SecretWhenInCombat"` -- returned values are secret during combat but readable afterward. See [Blizzard UI Examples - Damage Meter](07_Blizzard_UI_Examples.md#damage-meter) for full data structures, enums, and workaround patterns.
 
 ```lua
--- Damage/healing statistics
-C_DamageMeter.GetCombatData()
-C_DamageMeter.GetPlayerDamage("unit")
-C_DamageMeter.GetPlayerHealing("unit")
-C_DamageMeter.GetEncounterInfo()
+-- Session discovery
+C_DamageMeter.GetAvailableCombatSessions()  -- Returns DamageMeterAvailableCombatSession[]
+C_DamageMeter.IsDamageMeterAvailable()      -- Returns isAvailable (bool), failureReason (string)
 
--- Combat segments
-C_DamageMeter.GetCurrentSegment()
-C_DamageMeter.GetSegmentInfo(segmentIndex)
-C_DamageMeter.GetNumSegments()
+-- Session data (SecretWhenInCombat)
+C_DamageMeter.GetCombatSessionFromID(sessionID, type)          -- Returns DamageMeterCombatSession
+C_DamageMeter.GetCombatSessionFromType(sessionType, type)      -- Returns DamageMeterCombatSession
+
+-- Spell breakdown per source (SecretWhenInCombat)
+C_DamageMeter.GetCombatSessionSourceFromID(sessionID, type, sourceGUID)
+C_DamageMeter.GetCombatSessionSourceFromType(sessionType, type, sourceGUID)
+
+-- Management
+C_DamageMeter.ResetAllCombatSessions()
 ```
 
 ### C_EncounterTimeline - Boss Ability Timeline

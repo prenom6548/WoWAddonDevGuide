@@ -1055,13 +1055,15 @@ end)
 **Available Meter Types (Enum.DamageMeterType numeric values):**
 | Type | Value | Notes |
 |------|-------|-------|
-| DamageDone | 0 | Standard DPS meter |
+| DamageDone | 0 | Standard damage meter |
+| Dps | 1 | DPS meter |
 | HealingDone | 2 | Healing meter |
+| Hps | 3 | HPS meter |
 | Absorbs | 4 | Absorb shields |
 | Interrupts | 5 | Interrupt count |
 | Dispels | 6 | Dispel count |
 | DamageTaken | 7 | Damage taken meter |
-| Deaths | 9 | Death tracking |
+| AvoidableDamageTaken | 8 | Avoidable damage taken |
 
 **Unsupported Modes on 12.0+:**
 Some detailed modes require combat log detail that C_DamageMeter does not provide. These should be disabled on 12.0+:
@@ -1076,23 +1078,28 @@ Some detailed modes require combat log detail that C_DamageMeter does not provid
 C_DamageMeter.IsDamageMeterAvailable()
   -- Returns: isAvailable (bool), failureReason (string)
 
+-- Discover available sessions
+C_DamageMeter.GetAvailableCombatSessions()
+  -- Returns: DamageMeterAvailableCombatSession[] (sessionID, name)
+
 -- Get session data (combatSources sorted highest-first)
 C_DamageMeter.GetCombatSessionFromType(sessionType, meterType)
 C_DamageMeter.GetCombatSessionFromID(sessionID, meterType)
 
 -- Get spell breakdown for a specific source
 C_DamageMeter.GetCombatSessionSourceFromType(sessionType, meterType, sourceGUID)
+C_DamageMeter.GetCombatSessionSourceFromID(sessionID, meterType, sourceGUID)
 
 -- Reset all sessions
 C_DamageMeter.ResetAllCombatSessions()
 
 -- Enums:
--- Enum.DamageMeterSessionType = { Overall, CurrentFight, LastFight }
--- Enum.DamageMeterType = { DamageDone (0), HealingDone (2), Absorbs (4),
---                          Interrupts (5), Dispels (6), DamageTaken (7), Deaths (9) }
+-- Enum.DamageMeterSessionType = { Overall (0), Current (1), Expired (2) }
+-- Enum.DamageMeterType = { DamageDone (0), Dps (1), HealingDone (2), Hps (3),
+--     Absorbs (4), Interrupts (5), Dispels (6), DamageTaken (7), AvoidableDamageTaken (8) }
 
 -- Events (fire during combat, useful for triggering UI updates):
--- DAMAGE_METER_COMBAT_SESSION_UPDATED
+-- DAMAGE_METER_COMBAT_SESSION_UPDATED (type, sessionID)
 -- DAMAGE_METER_CURRENT_SESSION_UPDATED
 -- DAMAGE_METER_RESET
 ```
@@ -3297,7 +3304,7 @@ eventFrame:SetScript("OnEvent", function(self, event)
         C_Timer.After(0.5, function()
             -- Secret values are now fully readable as normal numbers
             MyMeter:UpdateFromAPI(
-                Enum.DamageMeterSessionType.LastFight,
+                Enum.DamageMeterSessionType.Expired,
                 Enum.DamageMeterType.DamageDone
             )
             MyMeter:UpdateBars()
@@ -3323,13 +3330,15 @@ eventFrame:RegisterEvent("DAMAGE_METER_COMBAT_SESSION_UPDATED")
 
 | Type | Enum Value | Notes |
 |------|------------|-------|
-| DamageDone | 0 | Standard DPS meter |
+| DamageDone | 0 | Standard damage meter |
+| Dps | 1 | DPS meter |
 | HealingDone | 2 | Healing meter |
+| Hps | 3 | HPS meter |
 | Absorbs | 4 | Absorb shields |
 | Interrupts | 5 | Interrupt count |
 | Dispels | 6 | Dispel count |
 | DamageTaken | 7 | Damage taken meter |
-| Deaths | 9 | Death tracking |
+| AvoidableDamageTaken | 8 | Avoidable damage taken |
 
 **Key Techniques Summary:**
 

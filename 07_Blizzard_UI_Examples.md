@@ -764,64 +764,154 @@ end)
 
 ## Damage Meter
 
-### Official Damage Meter (12.0 New) - ⛔ SECRET-PROTECTED
+### Official Damage Meter (12.0.0 New) - SECRET DURING COMBAT, USABLE WITH WORKAROUNDS
 
-> **⚠️ CRITICAL (Verified January 2026):** While `Blizzard_DamageMeter` addon and `C_DamageMeter` API exist, **the data is protected as "secret values"** and cannot be accessed by third-party addons. The code examples below show the API structure but **WILL NOT WORK** in practice.
+The official Damage Meter was added in 12.0.0. The `Blizzard_DamageMeter` addon depends on `Blizzard_EditMode` and provides the built-in meter UI. Data returned by `C_DamageMeter` is SECRET during combat (annotated `SecretWhenInCombat`) but IS accessible to third-party addons via workarounds. Recount's `Tracker_DamageMeter.lua` is a working real-world example.
 
-**Source Files:**
-- `Blizzard_DamageMeter\Blizzard_DamageMeter.lua`
-- `Blizzard_DamageMeter\Blizzard_DamageMeterTemplates.xml`
+**Source Files** (inside `Blizzard_DamageMeter`):
+- `DamageMeter.lua` / `DamageMeter.xml`
+- `DamageMeterEntry.lua` / `DamageMeterEntry.xml`
+- `DamageMeterSessionWindow.lua` / `DamageMeterSessionWindow.xml`
+- `DamageMeterSourceWindow.lua` / `DamageMeterSourceWindow.xml`
+- `DamageMeterSettingsDropdownButton.lua` / `DamageMeterSettingsDropdownButton.xml`
+- `DamageMeterConstants.lua`
 
-**Why Blizzard's Code Works But Yours Won't:**
-Blizzard's own UI code runs in a secure execution context and can access secret values. Third-party addon code runs in an insecure context and cannot.
+#### C_DamageMeter API
 
-**What Happens When You Try:**
+| Function | Parameters | Returns |
+|----------|-----------|---------|
+| GetAvailableCombatSessions | *(none)* | DamageMeterAvailableCombatSession[] |
+| GetCombatSessionFromID | sessionID, type | DamageMeterCombatSession |
+| GetCombatSessionFromType | sessionType, type | DamageMeterCombatSession |
+| GetCombatSessionSourceFromID | sessionID, type, sourceGUID | DamageMeterCombatSessionSource |
+| GetCombatSessionSourceFromType | sessionType, type, sourceGUID | DamageMeterCombatSessionSource |
+| IsDamageMeterAvailable | *(none)* | isAvailable (bool), failureReason (string) |
+| ResetAllCombatSessions | *(none)* | *(none)* |
+
+`GetCombatSessionFromID`, `GetCombatSessionFromType`, `GetCombatSessionSourceFromID`, and `GetCombatSessionSourceFromType` all have `SecretArguments = "SecretWhenInCombat"`.
+
+#### Data Structures
+
+**DamageMeterAvailableCombatSession:**
+
+| Field | Type |
+|-------|------|
+| sessionID | number |
+| name | cstring |
+
+**DamageMeterCombatSession:**
+
+| Field | Type |
+|-------|------|
+| combatSources | DamageMeterCombatSource[] |
+| maxAmount | number (default 0) |
+
+**DamageMeterCombatSource:**
+
+| Field | Type | Secret? |
+|-------|------|---------|
+| sourceGUID | WOWGUID | Yes (during combat) |
+| name | cstring | ConditionalSecret |
+| classFilename | cstring | NeverSecret |
+| specIconID | fileID | NeverSecret |
+| totalAmount | number | Yes (during combat) |
+| amountPerSecond | number | Yes (during combat) |
+| isLocalPlayer | bool | NeverSecret |
+
+**DamageMeterCombatSessionSource:**
+
+| Field | Type |
+|-------|------|
+| combatSpells | DamageMeterCombatSpell[] |
+| maxAmount | number |
+
+**DamageMeterCombatSpell:**
+
+| Field | Type |
+|-------|------|
+| spellID | number |
+| totalAmount | number |
+| amountPerSecond | number |
+| creatureName | cstring |
+| combatSpellDetails | DamageMeterCombatSpellUnitDetails |
+
+**DamageMeterCombatSpellUnitDetails:**
+
+| Field | Type | Secret? |
+|-------|------|---------|
+| unitName | cstring | -- |
+| unitClassFilename | cstring | NeverSecret |
+| classification | cstring | NeverSecret |
+| amount | number | -- |
+
+#### Enumerations
+
+**Enum.DamageMeterType:**
+
+| Value | Name |
+|-------|------|
+| 0 | DamageDone |
+| 1 | Dps |
+| 2 | HealingDone |
+| 3 | Hps |
+| 4 | Absorbs |
+| 5 | Interrupts |
+| 6 | Dispels |
+| 7 | DamageTaken |
+| 8 | AvoidableDamageTaken |
+
+**Enum.DamageMeterSessionType:**
+
+| Value | Name |
+|-------|------|
+| 0 | Overall |
+| 1 | Current |
+| 2 | Expired |
+
+**Enum.DamageMeterOverrideType:** Ignore=0, AllowFriendlyFire=1, RedirectSourceToOwner=2, RedirectSourceToAuraCaster=3, IgnoreForAbsorbSpell=4
+
+**Enum.DamageMeterStorageType:** Damage=0, HealingAndAbsorbs=1, Absorbs=2, Interrupts=3, Dispels=4, DamageTaken=5, AvoidableDamageTaken=6
+
+**Enum.DamageMeterSpellDetailsDisplayType:** SpellCasted=0, UnitSpecificSpellCasted=1, SpellAffected=2
+
+#### Events
+
+| Event | Payload |
+|-------|---------|
+| DAMAGE_METER_COMBAT_SESSION_UPDATED | type (DamageMeterType), sessionID (number) |
+| DAMAGE_METER_CURRENT_SESSION_UPDATED | *(none)* |
+| DAMAGE_METER_RESET | *(none)* |
+
+#### CVar
+
+`damageMeterEnabled` -- master on/off toggle for the built-in meter.
+
+#### Secret Value Workarounds
+
+During combat, secret fields cannot be used in Lua arithmetic or comparisons but CAN be passed to C++ APIs. After combat ends, all values become normal numbers.
+
 ```lua
--- The API exists and IsDamageMeterAvailable() returns true
-if C_DamageMeter then
-    local available = C_DamageMeter.IsDamageMeterAvailable() -- Returns true!
+local ok, session = pcall(C_DamageMeter.GetCombatSessionFromType,
+    Enum.DamageMeterSessionType.Overall, Enum.DamageMeterType.DamageDone)
+if ok and session then
+    for i, source in ipairs(session.combatSources) do
+        -- NeverSecret fields always work:
+        local class = source.classFilename
+        local isMe = source.isLocalPlayer
+        local specIcon = source.specIconID
 
-    -- You can get session data...
-    local sessionData = C_DamageMeter.GetCombatSessionFromType(
-        Enum.DamageMeterSessionType.Overall,
-        Enum.DamageMeterType.DamageDone
-    )
+        -- Secret fields during combat -- use pcall or issecretvalue:
+        if not issecretvalue(source.totalAmount) then
+            -- Safe to use in arithmetic
+        end
 
-    -- ...but the VALUES inside are SECRET:
-    for _, source in ipairs(sessionData.combatSources) do
-        -- These throw "attempt to compare (a secret value)" errors:
-        if source.name == "SomePlayer" then end  -- ERROR!
-
-        -- These return <no value> (secret):
-        local damage = source.totalAmount     -- SECRET
-        local dps = source.amountPerSecond    -- SECRET
-        local guid = source.sourceGUID        -- SECRET
-
-        -- Only cosmetic data works (useless without names/amounts):
-        local class = source.classFilename    -- Works: "WARRIOR"
-        local isMe = source.isLocalPlayer     -- Works: true
+        -- StatusBar:SetValue() accepts secret values natively
+        bar:SetValue(source.totalAmount)
     end
 end
 ```
 
-**The Bottom Line:**
-- `C_DamageMeter` is for Blizzard's built-in meter ONLY
-- Third-party addons CANNOT create custom damage meters in 12.0.0+
-- Players must use Blizzard's meter (Shift+P or Encounter Journal)
-
-**Events (Fire But Contain No Usable Data):**
-```lua
--- These events fire, but you can't do anything useful with them
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("DAMAGE_METER_COMBAT_SESSION_UPDATED")
-frame:RegisterEvent("DAMAGE_METER_CURRENT_SESSION_UPDATED")
-frame:RegisterEvent("DAMAGE_METER_RESET")
-frame:SetScript("OnEvent", function(self, event, ...)
-    -- Events fire, but when you try to read the data, it's all secret
-    print("Event fired:", event)  -- This works
-    -- Actually using the data? Nope, it's secret.
-end)
-```
+See [Secret Safe APIs](12a_Secret_Safe_APIs.md) for the full secret value reference and [API Migration Guide](12_API_Migration_Guide.md) for migration patterns from legacy combat log parsing.
 
 ---
 
