@@ -1,6 +1,40 @@
 <\!-- CLAUDE_SKIP_START -->
 # WoW Addon Development Knowledge Base - Update Log
 
+## Version 3.1 - 2026-04-03
+
+### Updated: Cooldown Viewer Guide with CooldownManagerCentered Analysis Findings
+
+**Summary:**
+Updated [13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md) with new discoveries from analyzing the CooldownManagerCentered addon. Added viewer frame properties, child frame properties, C_AssistedCombat integration, context menu hook points, secret-safe dimming techniques, and nuanced taint guidance.
+
+**Files Updated:**
+- [13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md) - 10 additions/changes across existing sections
+
+**Content Added:**
+
+1. **Viewer Frame Accessible Properties** (Viewer Frame Templates section) -- Documented `isHorizontal`, `iconDirection`, `iconLimit`, `iconScale`, `childXPadding`, `childYPadding`, `visibleSetting`, `settingMap`, and `IsInitialized()` method. Added note about checking `EditModeManagerFrame.layoutApplyInProgress`.
+
+2. **Child Frame (Icon) Accessible Properties** (Viewer Frame Templates section) -- Documented `cooldownID`, `layoutIndex`, `wasSetFromAura`, `cooldownChargesShown`, `cooldownShowSwipe`, `CooldownFlash`, `GetCooldownInfo()`, and `GetBaseSpellID()` with usage notes.
+
+3. **SetAlphaFromBoolean** (Alert System section) -- Documented C++-level method on glow frames for mapping secret boolean values to alpha without exposing them to Lua.
+
+4. **Context Menu Hook Point** (Addon Integration section) -- Documented `MENU_COOLDOWN_SETTINGS_ITEM` as the hook point for adding custom options to CDM icon right-click context menus with code example.
+
+5. **Opening CDM Settings Programmatically** (Addon Integration section) -- Documented `CooldownViewerSettings:ShowUIPanel(false)` with combat-safe `Show()` fallback.
+
+6. **EventRegistry Callback Arguments** (Events section) -- Added argument column to the EventRegistry table; `OnShow` and `OnHide` pass the settings frame, `OnDataChanged` fires on any layout data change.
+
+7. **C_AssistedCombat Integration** (Addon Integration section) -- Documented `GetRotationSpells()`, `GetNextCastSpell()`, and `AssistedCombatManager:UpdateAllAssistedHighlightFramesForSpell()` hook for rotation highlighting on CDM icons.
+
+8. **Utility Dimming with C_CurveUtil** (Addon Integration section) -- Documented secret-safe dimming technique using `C_CurveUtil.CreateCurve()` with `SetAlphaFromCurve()` and DurationObjects.
+
+9. **Charge Detection Gap** (Cooldown Tracking section) -- Added caveat about no clean non-secret API for distinguishing charge cooldown vs GCD; `CooldownFlash:IsShown()` is an unreliable workaround.
+
+10. **Nuanced Child-Hook Taint Warning** (Taint Avoidance section) -- Changed "Never hook" to "Risky to hook" with practical note that CooldownManagerCentered successfully hooks child-level methods via `hooksecurefunc` for post-processing, with TaintLess library mitigation.
+
+---
+
 ## Version 3.0 - 2026-04-03
 
 ### Added: Dedicated Ace3 Library Guide + Ace3/Base API Separation

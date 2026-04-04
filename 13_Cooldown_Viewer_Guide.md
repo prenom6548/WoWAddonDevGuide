@@ -98,13 +98,13 @@ Returned by `GetCooldownViewerCooldownInfo`:
 
 The system also uses the `EventRegistry` for internal communication:
 
-| EventRegistry Callback | Description |
-|------------------------|-------------|
-| `CooldownViewerSettings.OnShow` | Settings window opened |
-| `CooldownViewerSettings.OnHide` | Settings window closed |
-| `CooldownViewerSettings.OnDataChanged` | Layout or cooldown data changed |
-| `CooldownViewerSettings.OnPendingChanges` | Layout manager has unsaved changes |
-| `CooldownViewerSettings.OnEnterItem` | Mouse entered a settings item (drag-and-drop) |
+| EventRegistry Callback | Argument | Description |
+|------------------------|----------|-------------|
+| `CooldownViewerSettings.OnShow` | settings frame | Settings window opened |
+| `CooldownViewerSettings.OnHide` | settings frame | Settings window closed |
+| `CooldownViewerSettings.OnDataChanged` | *(none)* | Layout data changed (profile switch, setting change) |
+| `CooldownViewerSettings.OnPendingChanges` | *(none)* | Layout manager has unsaved changes |
+| `CooldownViewerSettings.OnEnterItem` | *(none)* | Mouse entered a settings item (drag-and-drop) |
 
 ---
 
@@ -488,6 +488,10 @@ else
 end
 ```
 
+### Charge Detection Gap (Caveat)
+
+There is currently no clean non-secret API to determine if a charged spell is specifically on charge cooldown vs GCD. The `CooldownFlash:IsShown()` heuristic (checking if the charge-spent flipbook is visible) is used by addons as a workaround but is acknowledged as unreliable. The 12.0.1 `isEnabled` and `maxCharges` non-secret fields on cooldown info may provide better approaches in the future.
+
 ### Inventory Item Cooldowns
 
 `GetInventoryItemCooldown("player", slotID)` tracks trinket and consumable cooldowns. Filter out GCD by checking the duration:
@@ -767,6 +771,16 @@ local color = dur:EvaluateRemainingPercent(approachingCurve)
 glowWrapper:SetAlpha(color.a)  -- Secret-safe: SetAlpha handles secrets
 ```
 
+### SetAlphaFromBoolean (C++-Level Secret-Safe Method)
+
+Glow frames expose a C++-level method for mapping secret booleans to alpha values:
+
+```lua
+glow:SetAlphaFromBoolean(secretBoolValue, falseAlpha, trueAlpha)
+```
+
+Maps a boolean value (which may be a secret) to an alpha value without exposing the boolean to Lua. Useful for conditionally showing/hiding glow effects based on secret combat state. Since this executes at the C++ level, it bypasses secret value restrictions entirely.
+
 ---
 
 ## Layout System
@@ -1029,6 +1043,27 @@ EditMode indices are under `Enum.EditModeCooldownViewerSystemIndices`.
 
 All viewers inherit `CooldownViewerTemplate` which itself inherits `EditModeCooldownViewerSystemTemplate` and `GridLayoutFrame`. All have `ignoreInLayoutWhenActionBarIsOverriden = true` (except BuffBar which does not use UIParentBottomManaged).
 
+### Viewer Frame Accessible Properties
+
+Addon code can read these properties on CDM viewer frames:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `viewer.isHorizontal` | boolean | True if viewer uses horizontal layout |
+| `viewer.iconDirection` | number | Icon growth direction |
+| `viewer.iconLimit` | number | Maximum icons shown |
+| `viewer.iconScale` | number | Current icon scale factor |
+| `viewer.childXPadding` | number | Horizontal padding between icons |
+| `viewer.childYPadding` | number | Vertical padding between icons |
+| `viewer.visibleSetting` | CooldownViewerVisibleSetting | Visibility mode (Always/InCombat/Hidden) |
+| `viewer.settingMap` | table | Maps EditMode settings to their values (e.g., Opacity) |
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `viewer:IsInitialized()` | boolean | Returns false if viewer hasn't completed setup yet |
+
+**Important:** Always check `viewer:IsInitialized()` before operating on viewers. Also check `EditModeManagerFrame.layoutApplyInProgress` -- defer operations while Blizzard is applying layouts.
+
 ### Item Template Details
 
 **Essential Item** (`CooldownViewerEssentialItemTemplate`, 50x50):
@@ -1065,6 +1100,29 @@ All viewers inherit `CooldownViewerTemplate` which itself inherits `EditModeCool
 - Duration font string (right-aligned, `NumberFontNormal`, format: `COOLDOWN_DURATION_SEC`)
 - `allowHideWhenInactive = true`
 - StatusBar frame level: 511, Icon frame level: 512
+
+### Child Frame (Icon) Accessible Properties
+
+Addon code can read these properties on CDM icon child frames:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `child.cooldownID` | number | Unique ID for `C_CooldownViewer.GetCooldownViewerCooldownInfo()` |
+| `child.layoutIndex` | number | Position index in the viewer's layout |
+| `child.wasSetFromAura` | boolean | True when icon shows aura state (vs cooldown) |
+| `child.cooldownChargesShown` | boolean | True when charges display is active |
+| `child.cooldownShowSwipe` | boolean | Whether swipe animation is enabled |
+| `child.CooldownFlash` | frame | Flipbook frame shown when charges are spent |
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `child:GetCooldownInfo()` | table or nil | Returns cooldown info; nil for uninitialized frames |
+| `child:GetBaseSpellID()` | number | Returns the base spell ID for this icon |
+
+**Notes:**
+
+- `child.cooldownID` is the primary non-secret way addons identify what spell a CDM icon represents. Pass it to `C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID)` to get spell details.
+- `child:GetCooldownInfo()` can return nil for frames that haven't been fully initialized -- always check for nil before using the return value.
 
 ---
 
@@ -1534,6 +1592,42 @@ if barContent == BAR_CONTENT_BAR_ONLY then
 end
 ```
 
+### Context Menu Hook Point (MENU_COOLDOWN_SETTINGS_ITEM)
+
+Addons can add custom options to the CDM icon right-click context menu using the `MENU_COOLDOWN_SETTINGS_ITEM` hook:
+
+```lua
+Menu.ModifyMenu("MENU_COOLDOWN_SETTINGS_ITEM", function(owner, rootDescription, contextData)
+    -- owner is the CDM icon frame
+    -- owner:GetCooldownInfo() returns the cooldown info
+    -- owner:GetBaseSpellID() returns the spell ID
+    
+    rootDescription:CreateDivider()
+    rootDescription:CreateTitle("My Addon Settings")
+    
+    local spellID = owner:GetBaseSpellID()
+    rootDescription:CreateCheckbox("Custom Option", function()
+        return MyAddon:IsOptionEnabled(spellID)
+    end, function()
+        MyAddon:ToggleOption(spellID)
+    end)
+end)
+```
+
+### Opening CDM Settings Programmatically
+
+```lua
+-- Out of combat: opens settings panel normally
+CooldownViewerSettings:ShowUIPanel(false)
+
+-- In combat: use Show() instead (ShowUIPanel is restricted)
+if InCombatLockdown() then
+    CooldownViewerSettings:Show()
+else
+    CooldownViewerSettings:ShowUIPanel(false)
+end
+```
+
 ### Checking Texture FileIDs with Secret Values
 
 Texture values read from frame properties can be secret in tainted contexts. Always check with `issecretvalue()` before comparing FileIDs:
@@ -1548,6 +1642,51 @@ else
     end
 end
 ```
+
+### C_AssistedCombat Integration
+
+The Assisted Combat API powers the "Assisted Combat Rotation" feature that highlights suggested spells on CDM icons:
+
+```lua
+-- Get the list of spells in the current rotation suggestion
+local rotationSpells = C_AssistedCombat.GetRotationSpells()
+-- Returns array of { spellID = number }
+
+-- Get the next suggested spell to cast
+local nextSpell = C_AssistedCombat.GetNextCastSpell()
+-- Returns { spellID = number } or nil
+
+-- Hook to sync with Blizzard's highlight system
+hooksecurefunc(AssistedCombatManager, "UpdateAllAssistedHighlightFramesForSpell",
+    function(self, spellID, isActive)
+        -- spellID: the spell being highlighted/unhighlighted
+        -- isActive: true if this spell should be highlighted
+    end
+)
+```
+
+Addons can use this to show rotation suggestions on CDM icons by matching `C_AssistedCombat.GetRotationSpells()` against `child.cooldownID` resolved via `C_CooldownViewer.GetCooldownViewerCooldownInfo()`.
+
+### Utility Dimming with C_CurveUtil
+
+Secret-safe dimming technique to reduce opacity of off-cooldown icons:
+
+```lua
+-- Create a curve that maps remaining duration to opacity
+-- When duration is 0 (off cooldown): opacity = dimAlpha
+-- When duration > 0.1 (on cooldown): opacity = 1.0
+local dimCurve = C_CurveUtil.CreateCurve()
+dimCurve:AddPoint(0, dimAlpha)   -- at 0 seconds remaining: dim
+dimCurve:AddPoint(0.1, 1.0)      -- at 0.1+ seconds remaining: full opacity
+
+-- Apply to a cooldown's duration object
+local durationObj = child.Cooldown:GetDurationObject()
+if durationObj then
+    child:SetAlphaFromCurve(dimCurve, durationObj)
+end
+```
+
+This technique is fully secret-safe because `EvaluateRemainingDuration` handles secret duration values at the C++ level.
 
 ---
 
@@ -1651,13 +1790,15 @@ Hooks on child-level methods like `OnActiveStateChanged`, `OnUnitAuraAddedEvent`
 - `OnUnitAura`
 - `ProcessCooldownData`
 
-**Never hook (child-level):**
+**Risky to hook (child-level):**
 - `OnActiveStateChanged`
 - `OnUnitAuraAddedEvent`
 - `NeedsAddedAuraUpdate`
 - `RefreshData`
 - `RefreshIconBorder`
 - `RefreshIconDesaturation`
+
+> **Practical note:** Popular addons like CooldownManagerCentered hook `OnActiveStateChanged`, `OnUnitAuraAddedEvent`, and `OnUnitAuraRemovedEvent` on CDM child frames successfully using `hooksecurefunc`. While these hooks carry theoretical taint risk (especially in secure execution contexts), they work in practice for post-processing operations. The TaintLess library can mitigate some taint propagation. Use with caution and test thoroughly.
 
 ### Coalesced Layout via Dirty-Flag OnUpdate
 
