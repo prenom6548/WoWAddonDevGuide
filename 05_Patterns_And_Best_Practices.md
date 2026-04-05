@@ -184,7 +184,7 @@ end
 - `MixinName:OnLoad()` - Initialization method
 - `MixinName:OnShow()` - Show handler
 - `MixinName_Intrinsic` - Framework internals (rare, Blizzard only)
-- Private methods use lowercase: `mixinName:privateMethod()`
+- All mixin methods use PascalCase in Blizzard source (no lowercase "private" method convention). For true privacy, use file-local functions rather than mixin methods.
 
 ---
 
