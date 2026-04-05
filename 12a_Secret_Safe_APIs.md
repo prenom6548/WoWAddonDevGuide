@@ -410,7 +410,8 @@ These functions allow addon code to call Blizzard functions in a way that avoids
 
 Executes `func` in **the function's own security context**, not the caller's context.
 
-- For **C++ APIs and Blizzard Lua functions**, this means secure execution -- events fired by the function and any attribute writes or secure cascades it triggers will NOT carry the addon's taint.
+- For **Blizzard Lua functions**, this restores the callee's native security level -- useful when calling a Blizzard helper that reads protected state, so the tainted caller context doesn't propagate into the callee's Lua execution.
+- **However**, for **C++ API calls**, `securecallfunction` does NOT prevent C++ event taint attribution. Events fired by C++ APIs (e.g., `QUEST_WATCH_LIST_CHANGED` from `C_QuestLog.AddWorldQuestWatch()`) are still attributed to the addon regardless of wrapping. See [12_API_Migration_Guide.md](12_API_Migration_Guide.md#what-does-not-work) for details.
 - For **addon Lua functions**, it still runs as tainted because the function itself is tainted -- `securecallfunction` does not grant security, it restores the callee's native security level.
 
 ```lua
@@ -424,11 +425,13 @@ local result1, result2, ... = securecallfunction(func, arg1, arg2, ...)
 -- Returns:
 --   ...: Return values from the function
 
--- Primary use case: calling Blizzard APIs from addon code so their
--- side effects (events, attribute writes, secure cascades) execute securely
+-- Primary use case: calling Blizzard Lua functions so their internal
+-- reads of protected state execute in the callee's secure context.
+-- NOTE: Does NOT prevent C++ event taint attribution (see migration guide).
 securecallfunction(ShowUIPanel, SomeBlizzardPanel)
-securecallfunction(C_QuestLog.AddWorldQuestWatch, questID)
-securecallfunction(WorldMapFrame.SetMapID, WorldMapFrame, mapID)
+
+-- Useful for safe table access in tainted contexts:
+securecallfunction(rawget, someTable, someKey)
 
 -- Blizzard also uses this in SecureTypes to safely access values:
 local function GetValueSecure(self)
