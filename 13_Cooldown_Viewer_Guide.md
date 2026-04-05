@@ -1679,8 +1679,11 @@ local dimCurve = C_CurveUtil.CreateCurve()
 dimCurve:AddPoint(0, dimAlpha)   -- at 0 seconds remaining: dim
 dimCurve:AddPoint(0.1, 1.0)      -- at 0.1+ seconds remaining: full opacity
 
--- Apply to a cooldown's duration object
-local durationObj = child.Cooldown:GetDurationObject()
+-- Apply to a cooldown's duration object. Cooldown frames do NOT expose a
+-- GetDurationObject method; resolve the spellID from the CDM child's
+-- cooldownID and ask C_Spell for a LuaDurationObject.
+local cooldownInfo = C_CooldownViewer.GetCooldownViewerCooldownInfo(child.cooldownID)
+local durationObj = cooldownInfo and C_Spell.GetSpellCooldownDuration(cooldownInfo.spellID)
 if durationObj then
     child:SetAlphaFromCurve(dimCurve, durationObj)
 end
