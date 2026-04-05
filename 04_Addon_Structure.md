@@ -238,12 +238,12 @@ Controls when the addon loads.
 When `LoadOnDemand: 1`, the addon must be loaded via:
 ```lua
 -- Check if loaded
-if IsAddOnLoaded("AddonName") then
+if C_AddOns.IsAddOnLoaded("AddonName") then
     -- Use addon
 end
 
 -- Load the addon
-local loaded, reason = LoadAddOn("AddonName")
+local loaded, reason = C_AddOns.LoadAddOn("AddonName")
 if loaded then
     -- Initialize
 else
@@ -1029,7 +1029,7 @@ OptionsUI.xml
 ```lua
 -- In main addon - load when needed
 local function ShowOptions()
-    local loaded, reason = LoadAddOn("MyAddon_Options")
+    local loaded, reason = C_AddOns.LoadAddOn("MyAddon_Options")
     if loaded then
         MyAddon_Options:Show()
     else
@@ -1054,12 +1054,12 @@ Automatically loads when guild frame opens.
 #### Manual Load Control
 ```lua
 -- Check if already loaded
-if not IsAddOnLoaded("MyAddon_Options") then
+if not C_AddOns.IsAddOnLoaded("MyAddon_Options") then
     -- Check if available
-    local name, title, notes, loadable, reason = GetAddOnInfo("MyAddon_Options")
+    local name, title, notes, loadable, reason = C_AddOns.GetAddOnInfo("MyAddon_Options")
 
     if loadable then
-        LoadAddOn("MyAddon_Options")
+        C_AddOns.LoadAddOn("MyAddon_Options")
     else
         print("Cannot load:", reason)
         -- Reasons: "DISABLED", "MISSING", "INCOMPATIBLE", "CORRUPT"
