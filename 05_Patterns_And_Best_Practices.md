@@ -1152,35 +1152,34 @@ local function GetSafeUnitHealth(unit)
 end
 ```
 
-### Scrubbing Secret Values from Tables
+### Scrubbing Secret Values
+
+`scrubsecretvalues(...)` takes varargs and **returns** new values with secrets replaced by `nil`. It does NOT modify tables in place.
 
 ```lua
--- Clean tables before processing
-local function ProcessDataSafely(dataTable)
-    if scrubsecretvalues then
-        -- Remove secret values from table (modifies in place)
-        scrubsecretvalues(dataTable)
-    end
-
-    -- Now safe to process
-    for key, value in pairs(dataTable) do
-        -- Process cleaned data
-    end
+-- Scrub individual values (correct usage)
+local function GetSafeUnitInfo(unit)
+    local health, power, name = scrubsecretvalues(
+        UnitHealth(unit),
+        UnitPower(unit),
+        UnitName(unit)
+    )
+    -- health and power are nil if they were secret, real numbers otherwise
+    -- name is typically not secret
+    return {
+        health = health,
+        power = power,
+        name = name,
+    }
 end
 
--- Example: Processing unit info
-local function GetSafeUnitInfo(unit)
-    local info = {
-        health = UnitHealth(unit),
-        power = UnitPower(unit),
-        name = UnitName(unit),
-    }
-
-    if scrubsecretvalues then
-        scrubsecretvalues(info)
+-- For scrubbing table values, iterate and scrub each one
+local function ScrubTableValues(tbl)
+    for key, value in pairs(tbl) do
+        if issecretvalue(value) then
+            tbl[key] = nil
+        end
     end
-
-    return info
 end
 ```
 
