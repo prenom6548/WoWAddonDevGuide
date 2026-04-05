@@ -72,9 +72,6 @@ scrubsecretvalues(table)    -- Replaces secrets with nil
 
 -- Create a secret value (for testing)
 secretwrap(value)           -- Wrap a value as secret
-
--- Safe string concatenation with secrets
-string.concat(...)          -- Concatenate strings that may contain secrets
 ```
 
 ### Secret Predicates
@@ -1863,8 +1860,10 @@ When building strings that might include secret values:
 local msg = "Player " .. name .. " dealt " .. damage .. " damage"
 -- If 'damage' is a secret, this errors!
 
--- Safe approach using string.concat
-local msg = string.concat("Player ", name, " dealt ", damage, " damage")
+-- Safe approach: guard potentially-secret values with issecretvalue()
+-- and substitute a placeholder before concatenation.
+local damageText = issecretvalue(damage) and "???" or tostring(damage)
+local msg = "Player " .. name .. " dealt " .. damageText .. " damage"
 -- Works even if damage is a secret value
 ```
 
