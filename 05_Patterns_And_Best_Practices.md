@@ -27,21 +27,21 @@
 **Pattern: Single Global Table**
 ```lua
 -- Create addon namespace
-MyAddon = {};
-MyAddon.Config = {};
-MyAddon.DB = {};
-MyAddon.Modules = {};
+MyAddon = {}
+MyAddon.Config = {}
+MyAddon.DB = {}
+MyAddon.Modules = {}
 
 -- All addon code lives in this namespace
 function MyAddon:Initialize()
-    self.initialized = true;
+    self.initialized = true
 end
 ```
 
 **Pattern: C_\* Style Namespace (Modern)**
 ```lua
 -- Blizzard-style namespace for API functions
-MyAddon_Functions = {};
+MyAddon_Functions = {}
 
 function MyAddon_Functions.GetPlayerData()
     -- Implementation
@@ -57,14 +57,14 @@ end
 **Pattern: Module Registration**
 ```lua
 -- Core.lua
-MyAddon.Modules = {};
+MyAddon.Modules = {}
 
 function MyAddon:RegisterModule(name, module)
-    self.Modules[name] = module;
+    self.Modules[name] = module
 end
 
 -- Module file
-local InventoryModule = {};
+local InventoryModule = {}
 
 function InventoryModule:OnLoad()
     -- Initialize module
@@ -74,7 +74,7 @@ function InventoryModule:OnEnable()
     -- Enable module functionality
 end
 
-MyAddon:RegisterModule("Inventory", InventoryModule);
+MyAddon:RegisterModule("Inventory", InventoryModule)
 ```
 
 ### Local vs Global Variables
@@ -82,14 +82,14 @@ MyAddon:RegisterModule("Inventory", InventoryModule);
 **Best Practice:**
 ```lua
 -- GOOD: Use locals for frequently accessed globals
-local pairs, ipairs = pairs, ipairs;
-local tinsert, tremove = table.insert, table.remove;
-local UnitName, UnitClass = UnitName, UnitClass;
+local pairs, ipairs = pairs, ipairs
+local tinsert, tremove = table.insert, table.remove
+local UnitName, UnitClass = UnitName, UnitClass
 
 function MyAddon:ProcessPlayers()
     for i = 1, 40 do
         -- Uses local reference (faster)
-        local name = UnitName("raid" .. i);
+        local name = UnitName("raid" .. i)
     end
 end
 
@@ -97,7 +97,7 @@ end
 function MyAddon:ProcessPlayersSlow()
     for i = 1, 40 do
         -- Slower: global table lookup every iteration
-        local name = _G.UnitName("raid" .. i);
+        local name = _G.UnitName("raid" .. i)
     end
 end
 ```
@@ -112,21 +112,21 @@ end
 
 ```lua
 -- Define mixin table
-MyAddonFrameMixin = {};
+MyAddonFrameMixin = {}
 
 function MyAddonFrameMixin:OnLoad()
-    self:RegisterEvent("PLAYER_LOGIN");
-    self.data = {};
+    self:RegisterEvent("PLAYER_LOGIN")
+    self.data = {}
 end
 
 function MyAddonFrameMixin:OnEvent(event, ...)
     if event == "PLAYER_LOGIN" then
-        self:Initialize();
+        self:Initialize()
     end
 end
 
 function MyAddonFrameMixin:Initialize()
-    print("Initialized");
+    print("Initialized")
 end
 ```
 
@@ -146,19 +146,19 @@ end
 
 ```lua
 -- Combine multiple mixins
-StatusTrackingManagerMixin = CreateFromMixins(CallbackRegistryMixin);
+StatusTrackingManagerMixin = CreateFromMixins(CallbackRegistryMixin)
 
 StatusTrackingManagerMixin:GenerateCallbackEvents({
     "OnBarSelected",
     "OnBarVisibilityChanged",
-});
+})
 
 function StatusTrackingManagerMixin:Init()
     -- Call parent mixin init
-    CallbackRegistryMixin.OnLoad(self);
+    CallbackRegistryMixin.OnLoad(self)
 
     -- Own initialization
-    self.bars = {};
+    self.bars = {}
 end
 ```
 
@@ -171,9 +171,9 @@ end
 
 ```lua
 function CreateMyWidget(parent)
-    local widget = CreateFromMixins(MyWidgetMixin, CallbackRegistryMixin);
-    widget:Init(parent);
-    return widget;
+    local widget = CreateFromMixins(MyWidgetMixin, CallbackRegistryMixin)
+    widget:Init(parent)
+    return widget
 end
 ```
 
@@ -198,24 +198,24 @@ end
 ```lua
 -- Wait for multiple events before executing callback
 EventUtil.ContinueAfterAllEvents(function()
-    print("Both events received!");
-end, "PLAYER_LOGIN", "VARIABLES_LOADED");
+    print("Both events received!")
+end, "PLAYER_LOGIN", "VARIABLES_LOADED")
 ```
 
 **Pattern: Register Once**
 ```lua
 -- Execute callback once when event fires, then unregister
 EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_ENTERING_WORLD", function()
-    print("Player entered world");
-end);
+    print("Player entered world")
+end)
 ```
 
 **Pattern: Continue On Addon Loaded**
 ```lua
 -- Wait for specific addon to load
 EventUtil.ContinueOnAddOnLoaded("Blizzard_Communities", function()
-    print("Communities addon loaded");
-end);
+    print("Communities addon loaded")
+end)
 ```
 
 ### Callback Handle Container
@@ -224,45 +224,45 @@ end);
 
 ```lua
 -- Container to manage multiple event registrations
-local handles = EventUtil.CreateCallbackHandleContainer();
+local handles = EventUtil.CreateCallbackHandleContainer()
 
 -- Register multiple callbacks
 handles:RegisterCallback(EventRegistry, "SomeEvent", function()
-    print("Event 1");
-end);
+    print("Event 1")
+end)
 
 handles:RegisterCallback(EventRegistry, "AnotherEvent", function()
-    print("Event 2");
-end);
+    print("Event 2")
+end)
 
 -- Unregister all at once
-handles:Unregister();
+handles:Unregister()
 ```
 
 ### CallbackRegistry Pattern
 
 **Common Pattern:**
 ```lua
-MyAddonMixin = CreateFromMixins(CallbackRegistryMixin);
+MyAddonMixin = CreateFromMixins(CallbackRegistryMixin)
 
 -- Generate events this mixin can trigger
 MyAddonMixin:GenerateCallbackEvents({
     "OnDataLoaded",
     "OnSettingsChanged",
     "OnError",
-});
+})
 
 function MyAddonMixin:LoadData()
     -- Load data...
 
     -- Trigger callback
-    self:TriggerEvent("OnDataLoaded", data);
+    self:TriggerEvent("OnDataLoaded", data)
 end
 
 -- Usage
 myAddon:RegisterCallback("OnDataLoaded", function(owner, data)
-    print("Data loaded:", data);
-end, self);
+    print("Data loaded:", data)
+end, self)
 ```
 
 ### Callback-Based Event Registration (12.0.0+)
@@ -273,28 +273,28 @@ end, self);
 -- Modern callback pattern (12.0.0+)
 -- Register callback for any event
 RegisterEventCallback("PLAYER_LOGIN", function(...)
-    print("Player logged in!");
-end);
+    print("Player logged in!")
+end)
 
 -- With identifier for later unregistration
 local callbackID = RegisterEventCallback("PLAYER_ENTERING_WORLD", function(...)
-    print("Entered world");
-end);
+    print("Entered world")
+end)
 
 -- Unregister when done
-UnregisterEventCallback("PLAYER_ENTERING_WORLD", callbackID);
+UnregisterEventCallback("PLAYER_ENTERING_WORLD", callbackID)
 
 -- Unit-specific callbacks (more efficient for unit events)
 RegisterUnitEventCallback("player", "UNIT_HEALTH", function(unit, ...)
-    local health = UnitHealth(unit);
-    local maxHealth = UnitHealthMax(unit);
-    print(format("Player health: %d/%d", health, maxHealth));
-end);
+    local health = UnitHealth(unit)
+    local maxHealth = UnitHealthMax(unit)
+    print(format("Player health: %d/%d", health, maxHealth))
+end)
 
 -- Multiple units
 RegisterUnitEventCallback("target", "UNIT_AURA", function(unit, updateInfo)
     -- Handle target aura changes
-end);
+end)
 ```
 
 **Benefits of Callback Pattern:**
@@ -312,43 +312,43 @@ end);
 **Source:** `Blizzard_SharedXML\LayoutFrame.lua`
 
 ```lua
-BaseLayoutMixin = {};
+BaseLayoutMixin = {}
 
 function BaseLayoutMixin:MarkDirty()
     if self.dirty then
-        return;  -- Already marked
+        return  -- Already marked
     end
 
-    self.dirty = true;
+    self.dirty = true
 
     -- Only set OnUpdate while dirty (performance optimization)
-    self:SetScript("OnUpdate", self.OnUpdate);
+    self:SetScript("OnUpdate", self.OnUpdate)
 
     -- Propagate to parent
-    local parent = self:GetParent();
+    local parent = self:GetParent()
     while parent do
         if parent.MarkDirty then
-            parent:MarkDirty();
-            break;
+            parent:MarkDirty()
+            break
         end
-        parent = parent:GetParent();
+        parent = parent:GetParent()
     end
 end
 
 function BaseLayoutMixin:OnUpdate()
     if not self:IsDirty() then
-        return;
+        return
     end
 
-    self:Layout();
+    self:Layout()
 end
 
 function BaseLayoutMixin:Layout()
     -- Perform layout...
 
     -- Clear dirty flag and remove OnUpdate
-    self.dirty = false;
-    self:SetScript("OnUpdate", nil);
+    self.dirty = false
+    self:SetScript("OnUpdate", nil)
 end
 ```
 
@@ -360,12 +360,12 @@ end
 ### Caching Pattern
 
 ```lua
-MyAddonMixin = {};
+MyAddonMixin = {}
 
 function MyAddonMixin:GetPlayerInfo()
     -- Check cache first
     if self.cachedPlayerInfo then
-        return self.cachedPlayerInfo;
+        return self.cachedPlayerInfo
     end
 
     -- Expensive operation
@@ -373,15 +373,15 @@ function MyAddonMixin:GetPlayerInfo()
         name = UnitName("player"),
         class = UnitClass("player"),
         level = UnitLevel("player"),
-    };
+    }
 
     -- Cache result
-    self.cachedPlayerInfo = info;
-    return info;
+    self.cachedPlayerInfo = info
+    return info
 end
 
 function MyAddonMixin:InvalidateCache()
-    self.cachedPlayerInfo = nil;
+    self.cachedPlayerInfo = nil
 end
 ```
 
@@ -393,32 +393,32 @@ local States = {
     LOADING = 2,
     READY = 3,
     ERROR = 4,
-};
+}
 
-MyAddonMixin = {};
+MyAddonMixin = {}
 
 function MyAddonMixin:SetState(newState)
     if self.state == newState then
-        return;
+        return
     end
 
-    local oldState = self.state;
-    self.state = newState;
+    local oldState = self.state
+    self.state = newState
 
     -- State transition handlers
     if newState == States.LOADING then
-        self:OnEnterLoading();
+        self:OnEnterLoading()
     elseif newState == States.READY then
-        self:OnEnterReady();
+        self:OnEnterReady()
     elseif newState == States.ERROR then
-        self:OnEnterError();
+        self:OnEnterError()
     end
 
-    self:TriggerEvent("OnStateChanged", oldState, newState);
+    self:TriggerEvent("OnStateChanged", oldState, newState)
 end
 
 function MyAddonMixin:IsReady()
-    return self.state == States.READY;
+    return self.state == States.READY
 end
 ```
 
@@ -432,7 +432,7 @@ end
 
 ```lua
 -- Separation of concerns: data vs UI
-TableBuilderElementMixin = {};
+TableBuilderElementMixin = {}
 
 function TableBuilderElementMixin:Init(...)
     -- Initialize element
@@ -443,19 +443,19 @@ function TableBuilderElementMixin:Populate(rowData, dataProviderKey)
 end
 
 -- Cell extends element
-TableBuilderCellMixin = CreateFromMixins(TableBuilderElementMixin);
+TableBuilderCellMixin = CreateFromMixins(TableBuilderElementMixin)
 
 function TableBuilderCellMixin:OnLineEnter()
     -- Handle mouse enter
 end
 
 -- Row extends element
-TableBuilderRowMixin = CreateFromMixins(TableBuilderElementMixin);
+TableBuilderRowMixin = CreateFromMixins(TableBuilderElementMixin)
 
 function TableBuilderRowMixin:OnEnter()
-    self:OnLineEnter();
+    self:OnLineEnter()
     for i, cell in ipairs(self.cells) do
-        cell:OnLineEnter();
+        cell:OnLineEnter()
     end
 end
 ```
@@ -465,17 +465,17 @@ end
 ```lua
 -- Safe pack that handles nil values
 local function SafePack(...)
-    return {n = select("#", ...), ...};
+    return {n = select("#", ...), ...}
 end
 
 -- Safe unpack
 local function SafeUnpack(tbl)
-    return unpack(tbl, 1, tbl.n);
+    return unpack(tbl, 1, tbl.n)
 end
 
 -- Usage
-local args = SafePack(nil, "hello", nil, "world");
-print(SafeUnpack(args));  -- Correctly handles nils
+local args = SafePack(nil, "hello", nil, "world")
+print(SafeUnpack(args))  -- Correctly handles nils
 ```
 
 ### Table Copying
@@ -483,24 +483,24 @@ print(SafeUnpack(args));  -- Correctly handles nils
 ```lua
 -- Shallow copy
 local function CopyTable(source)
-    local copy = {};
+    local copy = {}
     for k, v in pairs(source) do
-        copy[k] = v;
+        copy[k] = v
     end
-    return copy;
+    return copy
 end
 
 -- Deep copy
 local function DeepCopyTable(source)
     if type(source) ~= "table" then
-        return source;
+        return source
     end
 
-    local copy = {};
+    local copy = {}
     for k, v in pairs(source) do
-        copy[k] = DeepCopyTable(v);
+        copy[k] = DeepCopyTable(v)
     end
-    return copy;
+    return copy
 end
 ```
 
@@ -511,21 +511,21 @@ end
 local function FindInTable(tbl, predicate)
     for i, value in ipairs(tbl) do
         if predicate(value) then
-            return value, i;
+            return value, i
         end
     end
-    return nil;
+    return nil
 end
 
 -- Filter table
 local function FilterTable(tbl, predicate)
-    local result = {};
+    local result = {}
     for i, value in ipairs(tbl) do
         if predicate(value) then
-            table.insert(result, value);
+            table.insert(result, value)
         end
     end
-    return result;
+    return result
 end
 
 -- Usage
@@ -533,11 +533,11 @@ local players = {
     {name = "Alice", level = 80},
     {name = "Bob", level = 75},
     {name = "Charlie", level = 80},
-};
+}
 
 local maxLevelPlayers = FilterTable(players, function(player)
-    return player.level == 80;  -- Max level in Midnight (12.0.0)
-end);
+    return player.level == 80  -- Max level in Midnight (12.0.0)
+end)
 ```
 
 ### Common Table Pitfalls
@@ -548,20 +548,20 @@ In Lua, empty tables (`{}`) evaluate as `true` in conditionals. This is a common
 
 ```lua
 -- WRONG: This is ALWAYS true, even if the table is empty
-local rewards = {};
+local rewards = {}
 if rewards then
-    print("Has rewards!");  -- Always prints!
+    print("Has rewards!")  -- Always prints!
 end
 
 -- RIGHT: Check if the table actually has entries
 -- For array-like tables:
 if rewards and #rewards > 0 then
-    print("Has rewards!");
+    print("Has rewards!")
 end
 
 -- For hash/mixed tables:
 if rewards and next(rewards) ~= nil then
-    print("Has rewards!");
+    print("Has rewards!")
 end
 ```
 
@@ -569,7 +569,7 @@ end
 
 ```lua
 -- WRONG: Empty table passes the check
-quest.reward.currencies = {};  -- initialized but no entries added
+quest.reward.currencies = {}  -- initialized but no entries added
 if quest.reward.currencies then  -- true! {} is truthy
     -- Incorrectly thinks currencies exist
 end
@@ -589,18 +589,18 @@ end
 ```lua
 -- Array iteration
 for index, value in ipairs(myArray) do
-    print(index, value);
+    print(index, value)
 end
 
 -- Table iteration (unordered)
 for key, value in pairs(myTable) do
-    print(key, value);
+    print(key, value)
 end
 
 -- Reverse iteration
 for i = #myArray, 1, -1 do
-    local value = myArray[i];
-    print(i, value);
+    local value = myArray[i]
+    print(i, value)
 end
 ```
 
@@ -609,21 +609,21 @@ end
 ```lua
 -- Enumerate with range
 local function CreateTableEnumerator(tbl, indexBegin, indexEnd)
-    indexBegin = indexBegin or 1;
-    indexEnd = indexEnd or #tbl;
+    indexBegin = indexBegin or 1
+    indexEnd = indexEnd or #tbl
 
-    local index = indexBegin - 1;
+    local index = indexBegin - 1
     return function()
-        index = index + 1;
+        index = index + 1
         if index <= indexEnd then
-            return index, tbl[index];
+            return index, tbl[index]
         end
-    end;
+    end
 end
 
 -- Usage
 for index, value in CreateTableEnumerator(myTable, 5, 10) do
-    print(index, value);
+    print(index, value)
 end
 ```
 
@@ -631,20 +631,20 @@ end
 
 ```lua
 local function FilteredPairs(tbl, predicate)
-    local key, value;
+    local key, value
     return function()
         repeat
-            key, value = next(tbl, key);
-        until key == nil or predicate(key, value);
-        return key, value;
-    end;
+            key, value = next(tbl, key)
+        until key == nil or predicate(key, value)
+        return key, value
+    end
 end
 
 -- Usage: Only iterate over numeric values
 for key, value in FilteredPairs(myTable, function(k, v)
-    return type(v) == "number";
+    return type(v) == "number"
 end) do
-    print(key, value);
+    print(key, value)
 end
 ```
 
@@ -656,32 +656,32 @@ end
 
 ```lua
 -- At file scope
-local pairs, ipairs, type = pairs, ipairs, type;
-local tinsert, tremove, wipe = table.insert, table.remove, wipe;
-local floor, ceil, max, min = math.floor, math.ceil, math.max, math.min;
-local format, gsub, match = string.format, string.gsub, string.match;
+local pairs, ipairs, type = pairs, ipairs, type
+local tinsert, tremove, wipe = table.insert, table.remove, wipe
+local floor, ceil, max, min = math.floor, math.ceil, math.max, math.min
+local format, gsub, match = string.format, string.gsub, string.match
 
 -- WoW API
-local UnitName, UnitGUID = UnitName, UnitGUID;
-local GetTime, GetTimePreciseSec = GetTime, GetTimePreciseSec;
+local UnitName, UnitGUID = UnitName, UnitGUID
+local GetTime, GetTimePreciseSec = GetTime, GetTimePreciseSec
 ```
 
 ### Table Preallocation (11.1.7+)
 
 ```lua
 -- GOOD: Preallocate table size for known quantities
-local myTable = table.create(100);  -- Preallocate array for 100 elements
+local myTable = table.create(100)  -- Preallocate array for 100 elements
 for i = 1, 100 do
-    myTable[i] = i * 2;
+    myTable[i] = i * 2
 end
 
 -- Use for known-size arrays to avoid reallocation
 local function ProcessRaidMembers()
-    local members = table.create(40);  -- Max raid size
+    local members = table.create(40)  -- Max raid size
     for i = 1, GetNumGroupMembers() do
-        members[i] = UnitName("raid" .. i);
+        members[i] = UnitName("raid" .. i)
     end
-    return members;
+    return members
 end
 
 -- Note: table.create() only helps with array parts, not hash parts
@@ -692,30 +692,30 @@ end
 ```lua
 -- Manual timing with debugprofilestop() (always available, no CVar needed)
 local function ProfileExpensiveOperation()
-    local startTime = debugprofilestop();  -- Returns elapsed ms since UI load
+    local startTime = debugprofilestop()  -- Returns elapsed ms since UI load
 
     -- Your code here
-    DoExpensiveWork();
+    DoExpensiveWork()
 
-    local elapsed = debugprofilestop() - startTime;
+    local elapsed = debugprofilestop() - startTime
     -- elapsed is in milliseconds (fractional)
 end
 
 -- Measure a specific function call via C_AddOnProfiler (11.1.7+)
 -- Returns elapsed time in seconds
-local elapsed = C_AddOnProfiler.MeasureCall(DoSomethingExpensive, arg1, arg2);
+local elapsed = C_AddOnProfiler.MeasureCall(DoSomethingExpensive, arg1, arg2)
 
 -- Query per-addon metrics from C_AddOnProfiler (always enabled in 12.0.0+)
 local recentAvg = C_AddOnProfiler.GetAddOnMetric(
     "MyAddon", Enum.AddOnProfilerMetric.RecentAverageTime
-);
+)
 local peakTime = C_AddOnProfiler.GetAddOnMetric(
     "MyAddon", Enum.AddOnProfilerMetric.PeakTime
-);
+)
 
 -- Memory profiling uses legacy globals (still work in 12.0.0+)
-UpdateAddOnMemoryUsage();  -- Must call first to refresh data
-local memoryKB = GetAddOnMemoryUsage("MyAddon");
+UpdateAddOnMemoryUsage()  -- Must call first to refresh data
+local memoryKB = GetAddOnMemoryUsage("MyAddon")
 ```
 
 ### Avoid OnUpdate When Possible
@@ -723,86 +723,86 @@ local memoryKB = GetAddOnMemoryUsage("MyAddon");
 ```lua
 -- BAD: Constant OnUpdate
 frame:SetScript("OnUpdate", function(self, elapsed)
-    self.timer = (self.timer or 0) + elapsed;
+    self.timer = (self.timer or 0) + elapsed
     if self.timer >= 1 then
-        self:Update();
-        self.timer = 0;
+        self:Update()
+        self.timer = 0
     end
-end);
+end)
 
 -- GOOD: Use C_Timer instead
 C_Timer.NewTicker(1, function()
-    frame:Update();
-end);
+    frame:Update()
+end)
 
 -- BETTER: Event-driven
-frame:RegisterEvent("PLAYER_REGEN_ENABLED");
+frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_REGEN_ENABLED" then
-        self:Update();
+        self:Update()
     end
-end);
+end)
 ```
 
 ### Table Recycling
 
 ```lua
 -- Reuse tables instead of creating new ones
-local tableCache = {};
+local tableCache = {}
 
 local function AcquireTable()
-    return tremove(tableCache) or {};
+    return tremove(tableCache) or {}
 end
 
 local function ReleaseTable(tbl)
-    wipe(tbl);
-    tinsert(tableCache, tbl);
+    wipe(tbl)
+    tinsert(tableCache, tbl)
 end
 
 -- Usage
-local myTable = AcquireTable();
-myTable.foo = "bar";
+local myTable = AcquireTable()
+myTable.foo = "bar"
 -- ... use table ...
-ReleaseTable(myTable);  -- Return to pool
+ReleaseTable(myTable)  -- Return to pool
 ```
 
 ### String Concatenation
 
 ```lua
 -- BAD: Creates many intermediate strings
-local str = "";
+local str = ""
 for i = 1, 1000 do
-    str = str .. tostring(i);  -- Very slow!
+    str = str .. tostring(i)  -- Very slow!
 end
 
 -- GOOD: Use table concatenation
-local parts = {};
+local parts = {}
 for i = 1, 1000 do
-    tinsert(parts, tostring(i));
+    tinsert(parts, tostring(i))
 end
-local str = table.concat(parts);
+local str = table.concat(parts)
 
 -- BETTER: Use string.format for known patterns
-local str = format("%d items, %s quality", count, quality);
+local str = format("%d items, %s quality", count, quality)
 ```
 
 ### Frame Pool Pattern
 
 ```lua
 -- Create pool
-local pool = CreateFramePool("Button", parent, "MyButtonTemplate");
+local pool = CreateFramePool("Button", parent, "MyButtonTemplate")
 
 -- Acquire from pool
-local button = pool:Acquire();
-button:SetText("Hello");
-button:SetPoint("CENTER");
-button:Show();
+local button = pool:Acquire()
+button:SetText("Hello")
+button:SetPoint("CENTER")
+button:Show()
 
 -- Release when done
-pool:Release(button);
+pool:Release(button)
 
 -- Release all
-pool:ReleaseAll();
+pool:ReleaseAll()
 ```
 
 ---
@@ -813,11 +813,11 @@ pool:ReleaseAll();
 
 ```lua
 function MyAddon:SetData(data)
-    assert(type(data) == "table", "Data must be a table");
-    assert(data.name, "Data must have a name field");
-    assert(data.level and data.level > 0, "Invalid level");
+    assert(type(data) == "table", "Data must be a table")
+    assert(data.name, "Data must have a name field")
+    assert(data.level and data.level > 0, "Invalid level")
 
-    self.data = data;
+    self.data = data
 end
 ```
 
@@ -827,57 +827,57 @@ end
 -- pcall for error handling
 local success, result = pcall(function()
     -- Code that might error
-    return SomeRiskyOperation();
-end);
+    return SomeRiskyOperation()
+end)
 
 if success then
-    print("Result:", result);
+    print("Result:", result)
 else
-    print("Error:", result);  -- result is error message
+    print("Error:", result)  -- result is error message
 end
 
 -- xpcall with error handler
 local function errorHandler(err)
-    print("Error occurred:", err);
-    print(debugstack());
-    return err;
+    print("Error occurred:", err)
+    print(debugstack())
+    return err
 end
 
 local success, result = xpcall(function()
-    return SomeRiskyOperation();
-end, errorHandler);
+    return SomeRiskyOperation()
+end, errorHandler)
 ```
 
 ### Validation Pattern
 
 ```lua
 local function ValidateConfig(config)
-    local errors = {};
+    local errors = {}
 
     if not config.name or config.name == "" then
-        tinsert(errors, "Name is required");
+        tinsert(errors, "Name is required")
     end
 
     -- Max level is 80 in Midnight (12.0.0)
-    local MAX_LEVEL = GetMaxLevelForPlayerExpansion and GetMaxLevelForPlayerExpansion() or 80;
+    local MAX_LEVEL = GetMaxLevelForPlayerExpansion and GetMaxLevelForPlayerExpansion() or 80
     if not config.level or config.level < 1 or config.level > MAX_LEVEL then
-        tinsert(errors, "Level must be between 1 and " .. MAX_LEVEL);
+        tinsert(errors, "Level must be between 1 and " .. MAX_LEVEL)
     end
 
     if #errors > 0 then
-        return false, errors;
+        return false, errors
     end
 
-    return true;
+    return true
 end
 
 -- Usage
-local valid, errors = ValidateConfig(userConfig);
+local valid, errors = ValidateConfig(userConfig)
 if not valid then
     for _, error in ipairs(errors) do
-        print("Validation error:", error);
+        print("Validation error:", error)
     end
-    return;
+    return
 end
 ```
 
@@ -891,16 +891,16 @@ end
 -- Wrap API calls that may return nil
 function MyAddon:GetItemInfo(itemID)
     if not itemID then
-        return nil;
+        return nil
     end
 
     -- GetItemInfo may return nil if not cached
-    local name, link, quality, level = GetItemInfo(itemID);
+    local name, link, quality, level = GetItemInfo(itemID)
 
     if not name then
         -- Item not in cache, queue load
-        C_Item.RequestLoadItemDataByID(itemID);
-        return nil;
+        C_Item.RequestLoadItemDataByID(itemID)
+        return nil
     end
 
     return {
@@ -908,30 +908,30 @@ function MyAddon:GetItemInfo(itemID)
         link = link,
         quality = quality,
         level = level,
-    };
+    }
 end
 ```
 
 ### Cached API Calls
 
 ```lua
-MyAddon.Cache = {};
+MyAddon.Cache = {}
 
 function MyAddon:GetCachedItemInfo(itemID)
     -- Check cache
     if self.Cache[itemID] then
-        return self.Cache[itemID];
+        return self.Cache[itemID]
     end
 
     -- Call API
-    local info = self:GetItemInfo(itemID);
+    local info = self:GetItemInfo(itemID)
 
     if info then
         -- Cache result
-        self.Cache[itemID] = info;
+        self.Cache[itemID] = info
     end
 
-    return info;
+    return info
 end
 ```
 
@@ -939,43 +939,43 @@ end
 
 ```lua
 -- Some APIs require waiting for events
-MyAddon.PendingQueries = {};
+MyAddon.PendingQueries = {}
 
 function MyAddon:QueryItemInfo(itemID, callback)
     -- Check cache first
-    local cached = self:GetCachedItemInfo(itemID);
+    local cached = self:GetCachedItemInfo(itemID)
     if cached then
-        callback(cached);
-        return;
+        callback(cached)
+        return
     end
 
     -- Queue callback
     if not self.PendingQueries[itemID] then
-        self.PendingQueries[itemID] = {};
+        self.PendingQueries[itemID] = {}
     end
-    tinsert(self.PendingQueries[itemID], callback);
+    tinsert(self.PendingQueries[itemID], callback)
 
     -- Request load
-    C_Item.RequestLoadItemDataByID(itemID);
+    C_Item.RequestLoadItemDataByID(itemID)
 end
 
 -- Event handler
 function MyAddon:OnItemDataLoaded(itemID)
-    local callbacks = self.PendingQueries[itemID];
+    local callbacks = self.PendingQueries[itemID]
     if not callbacks then
-        return;
+        return
     end
 
     -- Get item info
-    local info = self:GetItemInfo(itemID);
+    local info = self:GetItemInfo(itemID)
 
     -- Execute all pending callbacks
     for _, callback in ipairs(callbacks) do
-        callback(info);
+        callback(info)
     end
 
     -- Clear pending
-    self.PendingQueries[itemID] = nil;
+    self.PendingQueries[itemID] = nil
 end
 ```
 
@@ -989,17 +989,17 @@ end
 -- Always check if APIs exist before using them
 local function SafeCallAPI(apiNamespace, funcName, ...)
     if apiNamespace and apiNamespace[funcName] then
-        return apiNamespace[funcName](...);
+        return apiNamespace[funcName](...)
     end
-    return nil;
+    return nil
 end
 
 -- Usage
-local result = SafeCallAPI(C_Item, "GetItemInfo", itemID);
+local result = SafeCallAPI(C_Item, "GetItemInfo", itemID)
 
 -- Direct existence check pattern
 if C_ActionBar and C_ActionBar.GetActionBarState then
-    local state = C_ActionBar.GetActionBarState();
+    local state = C_ActionBar.GetActionBarState()
 end
 ```
 
@@ -1010,23 +1010,23 @@ end
 local function GetActionBarStateCompat()
     -- 12.0.0+ uses C_ActionBar
     if C_ActionBar and C_ActionBar.GetActionBarState then
-        return C_ActionBar.GetActionBarState();
+        return C_ActionBar.GetActionBarState()
     end
     -- Fallback for older versions (if needed)
-    return nil;
+    return nil
 end
 
 -- Pattern for deprecated functions
 local function GetCombatLogEventCompat(...)
     -- Modern API (11.0.0+)
     if C_CombatLog and C_CombatLog.GetCurrentEventInfo then
-        return C_CombatLog.GetCurrentEventInfo();
+        return C_CombatLog.GetCurrentEventInfo()
     end
     -- Legacy global (deprecated but may still exist)
     if CombatLogGetCurrentEventInfo then
-        return CombatLogGetCurrentEventInfo();
+        return CombatLogGetCurrentEventInfo()
     end
-    return nil;
+    return nil
 end
 ```
 
@@ -1034,35 +1034,35 @@ end
 
 ```lua
 -- Create namespace if it doesn't exist (for cross-version addons)
-MyAddon.Compat = MyAddon.Compat or {};
+MyAddon.Compat = MyAddon.Compat or {}
 
 -- Shim for C_TransmogOutfitInfo (replaces old global functions)
 if not C_TransmogOutfitInfo then
     MyAddon.Compat.GetOutfitInfo = function(outfitID)
         -- Fallback implementation using old API
         if GetOutfitInfo then
-            return GetOutfitInfo(outfitID);
+            return GetOutfitInfo(outfitID)
         end
-        return nil;
-    end;
+        return nil
+    end
 else
     MyAddon.Compat.GetOutfitInfo = function(outfitID)
-        return C_TransmogOutfitInfo.GetOutfitInfo(outfitID);
-    end;
+        return C_TransmogOutfitInfo.GetOutfitInfo(outfitID)
+    end
 end
 
 -- Shim for C_ItemSocketInfo (replaces old socket globals)
 if not C_ItemSocketInfo then
     MyAddon.Compat.GetSocketInfo = function(socketIndex)
         if GetSocketItemInfo then
-            return GetSocketItemInfo(socketIndex);
+            return GetSocketItemInfo(socketIndex)
         end
-        return nil;
-    end;
+        return nil
+    end
 else
     MyAddon.Compat.GetSocketInfo = function(socketIndex)
-        return C_ItemSocketInfo.GetSocketItemInfo(socketIndex);
-    end;
+        return C_ItemSocketInfo.GetSocketItemInfo(socketIndex)
+    end
 end
 ```
 
@@ -1070,16 +1070,16 @@ end
 
 ```lua
 -- Check interface version for feature availability
-local INTERFACE_VERSION = select(4, GetBuildInfo());
+local INTERFACE_VERSION = select(4, GetBuildInfo())
 
-local IS_RETAIL = INTERFACE_VERSION >= 110000;
-local IS_MIDNIGHT = INTERFACE_VERSION >= 120000;
-local IS_TWW = INTERFACE_VERSION >= 110000 and INTERFACE_VERSION < 120000;
+local IS_RETAIL = INTERFACE_VERSION >= 110000
+local IS_MIDNIGHT = INTERFACE_VERSION >= 120000
+local IS_TWW = INTERFACE_VERSION >= 110000 and INTERFACE_VERSION < 120000
 
 -- Use for conditional feature loading
 if IS_MIDNIGHT then
     -- Use 12.0.0+ specific features
-    MyAddon:EnableHousingFeatures();
+    MyAddon:EnableHousingFeatures()
 end
 
 -- Feature flags based on API availability
@@ -1088,7 +1088,7 @@ MyAddon.Features = {
     HasEncodingUtil = C_EncodingUtil ~= nil,
     HasAddOnLocalTable = C_AddOns ~= nil and C_AddOns.GetAddOnLocalTable ~= nil,
     HasHousing = C_Housing ~= nil,
-};
+}
 ```
 
 ---
@@ -1105,22 +1105,22 @@ In 12.0.0 (Midnight), Blizzard introduced "secret values" to prevent addons from
 -- Check if restrictions are currently active
 local function AreRestrictionsActive()
     if C_RestrictedActions and C_RestrictedActions.IsAddOnRestrictionActive then
-        return C_RestrictedActions.IsAddOnRestrictionActive();
+        return C_RestrictedActions.IsAddOnRestrictionActive()
     end
-    return false;
+    return false
 end
 
 -- Typical usage
-local frame = CreateFrame("Frame");
-frame:RegisterEvent("PLAYER_REGEN_DISABLED");
-frame:RegisterEvent("PLAYER_REGEN_ENABLED");
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_REGEN_DISABLED" then
         if AreRestrictionsActive() then
-            print("Combat restrictions active - some features limited");
+            print("Combat restrictions active - some features limited")
         end
     end
-end);
+end)
 ```
 
 ### Detecting Secret Values
@@ -1130,22 +1130,22 @@ end);
 local function HandlePotentiallySecretValue(value)
     if issecretvalue and issecretvalue(value) then
         -- Value is secret, cannot use for automation
-        return nil, true;  -- Return nil and flag as secret
+        return nil, true  -- Return nil and flag as secret
     end
-    return value, false;
+    return value, false
 end
 
 -- Usage with unit health
 local function GetSafeUnitHealth(unit)
-    local health = UnitHealth(unit);
-    local actualHealth, isSecret = HandlePotentiallySecretValue(health);
+    local health = UnitHealth(unit)
+    local actualHealth, isSecret = HandlePotentiallySecretValue(health)
 
     if isSecret then
         -- Fall back to percentage or visual indicator
-        return nil;
+        return nil
     end
 
-    return actualHealth;
+    return actualHealth
 end
 ```
 
@@ -1156,7 +1156,7 @@ end
 local function ProcessDataSafely(dataTable)
     if scrubsecretvalues then
         -- Remove secret values from table (modifies in place)
-        scrubsecretvalues(dataTable);
+        scrubsecretvalues(dataTable)
     end
 
     -- Now safe to process
@@ -1171,13 +1171,13 @@ local function GetSafeUnitInfo(unit)
         health = UnitHealth(unit),
         power = UnitPower(unit),
         name = UnitName(unit),
-    };
+    }
 
     if scrubsecretvalues then
-        scrubsecretvalues(info);
+        scrubsecretvalues(info)
     end
 
-    return info;
+    return info
 end
 ```
 
@@ -1185,11 +1185,11 @@ end
 
 ```lua
 -- Mark frames that shouldn't receive secret values
-local myFrame = CreateFrame("Frame", "MyAddonFrame", UIParent);
+local myFrame = CreateFrame("Frame", "MyAddonFrame", UIParent)
 
 -- Prevent secret values from being passed to this frame's scripts
 if myFrame.SetPreventSecretValues then
-    myFrame:SetPreventSecretValues(true);
+    myFrame:SetPreventSecretValues(true)
 end
 
 -- This is useful for frames that:
@@ -1203,28 +1203,28 @@ end
 ```lua
 -- For health bars and similar UI elements, use Curve objects
 local function CreateHealthBar(parent)
-    local healthBar = CreateFrame("StatusBar", nil, parent);
+    local healthBar = CreateFrame("StatusBar", nil, parent)
 
     -- Health curve provides smooth animation without exposing exact values
-    local healthCurve = CreateCurve();
+    local healthCurve = CreateCurve()
 
     healthBar:SetScript("OnUpdate", function(self, elapsed)
         -- Curve automatically handles secret value restrictions
-        local displayValue = healthCurve:GetCurrentValue();
-        self:SetValue(displayValue);
-    end);
+        local displayValue = healthCurve:GetCurrentValue()
+        self:SetValue(displayValue)
+    end)
 
-    return healthBar, healthCurve;
+    return healthBar, healthCurve
 end
 
 -- ColorCurve for smooth color transitions
-local colorCurve = CreateColorCurve();
-colorCurve:SetStartColor(1, 0, 0, 1);  -- Red
-colorCurve:SetEndColor(0, 1, 0, 1);    -- Green
-colorCurve:SetDuration(1.0);
+local colorCurve = CreateColorCurve()
+colorCurve:SetStartColor(1, 0, 0, 1)  -- Red
+colorCurve:SetEndColor(0, 1, 0, 1)    -- Green
+colorCurve:SetDuration(1.0)
 
 -- Duration objects for timing
-local duration = CreateDuration(5.0);  -- 5 second duration
+local duration = CreateDuration(5.0)  -- 5 second duration
 ```
 
 ### StatusBar Floating-Point Precision
@@ -1257,24 +1257,24 @@ This applies to any StatusBar where the min/max range involves large absolute va
 
 -- Test helper
 local function TestSecretValueHandling()
-    print("Testing secret value handling...");
+    print("Testing secret value handling...")
 
-    local testValue = UnitHealth("player");
+    local testValue = UnitHealth("player")
 
     if issecretvalue and issecretvalue(testValue) then
-        print("Health is SECRET - restrictions active");
+        print("Health is SECRET - restrictions active")
     else
-        print("Health is NORMAL:", testValue);
+        print("Health is NORMAL:", testValue)
     end
 
     -- Test table scrubbing
-    local testTable = {health = UnitHealth("player"), name = "Test"};
-    print("Before scrub:", testTable.health);
+    local testTable = {health = UnitHealth("player"), name = "Test"}
+    print("Before scrub:", testTable.health)
 
     if scrubsecretvalues then
-        scrubsecretvalues(testTable);
+        scrubsecretvalues(testTable)
     end
-    print("After scrub:", testTable.health);
+    print("After scrub:", testTable.health)
 end
 ```
 
@@ -1296,34 +1296,34 @@ end
 -- Compress string data
 local function CompressData(data)
     if not C_EncodingUtil then
-        return data;  -- Fallback: return uncompressed
+        return data  -- Fallback: return uncompressed
     end
 
-    local compressed = C_EncodingUtil.CompressString(data);
-    return compressed;
+    local compressed = C_EncodingUtil.CompressString(data)
+    return compressed
 end
 
 -- Decompress string data
 local function DecompressData(compressed)
     if not C_EncodingUtil then
-        return compressed;
+        return compressed
     end
 
-    local decompressed = C_EncodingUtil.DecompressString(compressed);
-    return decompressed;
+    local decompressed = C_EncodingUtil.DecompressString(compressed)
+    return decompressed
 end
 
 -- Base64 encoding for transmission
 local function EncodeForTransmission(data)
-    local compressed = C_EncodingUtil.CompressString(data);
-    local base64 = C_EncodingUtil.EncodeBase64(compressed);
-    return base64;
+    local compressed = C_EncodingUtil.CompressString(data)
+    local base64 = C_EncodingUtil.EncodeBase64(compressed)
+    return base64
 end
 
 local function DecodeFromTransmission(encoded)
-    local compressed = C_EncodingUtil.DecodeBase64(encoded);
-    local data = C_EncodingUtil.DecompressString(compressed);
-    return data;
+    local compressed = C_EncodingUtil.DecodeBase64(encoded)
+    local data = C_EncodingUtil.DecompressString(compressed)
+    return data
 end
 ```
 
@@ -1333,18 +1333,18 @@ end
 -- Serialize table to JSON
 local function TableToJSON(tbl)
     if C_EncodingUtil and C_EncodingUtil.SerializeJSON then
-        return C_EncodingUtil.SerializeJSON(tbl);
+        return C_EncodingUtil.SerializeJSON(tbl)
     end
     -- Fallback: manual serialization
-    return nil;
+    return nil
 end
 
 -- Deserialize JSON to table
 local function JSONToTable(jsonString)
     if C_EncodingUtil and C_EncodingUtil.DeserializeJSON then
-        return C_EncodingUtil.DeserializeJSON(jsonString);
+        return C_EncodingUtil.DeserializeJSON(jsonString)
     end
-    return nil;
+    return nil
 end
 
 -- Example usage
@@ -1356,13 +1356,13 @@ local playerData = {
         showMinimap = true,
         scale = 1.0,
     },
-};
+}
 
-local json = TableToJSON(playerData);
-print("JSON:", json);
+local json = TableToJSON(playerData)
+print("JSON:", json)
 
-local restored = JSONToTable(json);
-print("Name:", restored.name);
+local restored = JSONToTable(json)
+print("Name:", restored.name)
 ```
 
 ### CBOR Serialization (Binary)
@@ -1371,16 +1371,16 @@ print("Name:", restored.name);
 -- CBOR is more compact than JSON for binary data
 local function TableToCBOR(tbl)
     if C_EncodingUtil and C_EncodingUtil.SerializeCBOR then
-        return C_EncodingUtil.SerializeCBOR(tbl);
+        return C_EncodingUtil.SerializeCBOR(tbl)
     end
-    return nil;
+    return nil
 end
 
 local function CBORToTable(cborData)
     if C_EncodingUtil and C_EncodingUtil.DeserializeCBOR then
-        return C_EncodingUtil.DeserializeCBOR(cborData);
+        return C_EncodingUtil.DeserializeCBOR(cborData)
     end
-    return nil;
+    return nil
 end
 
 -- Prefer CBOR for:
@@ -1398,28 +1398,28 @@ end
 
 ```lua
 -- Pattern for sending compressed addon messages
-local PREFIX = "MyAddon";
+local PREFIX = "MyAddon"
 
 local function SendCompressedMessage(data, channel, target)
-    local json = C_EncodingUtil.SerializeJSON(data);
-    local compressed = C_EncodingUtil.CompressString(json);
-    local encoded = C_EncodingUtil.EncodeBase64(compressed);
+    local json = C_EncodingUtil.SerializeJSON(data)
+    local compressed = C_EncodingUtil.CompressString(json)
+    local encoded = C_EncodingUtil.EncodeBase64(compressed)
 
-    C_ChatInfo.SendAddonMessage(PREFIX, encoded, channel, target);
+    C_ChatInfo.SendAddonMessage(PREFIX, encoded, channel, target)
 end
 
 local function ReceiveCompressedMessage(prefix, message, channel, sender)
     if prefix ~= PREFIX then return end
 
-    local compressed = C_EncodingUtil.DecodeBase64(message);
-    local json = C_EncodingUtil.DecompressString(compressed);
-    local data = C_EncodingUtil.DeserializeJSON(json);
+    local compressed = C_EncodingUtil.DecodeBase64(message)
+    local json = C_EncodingUtil.DecompressString(compressed)
+    local data = C_EncodingUtil.DeserializeJSON(json)
 
     -- Process received data
-    MyAddon:HandleReceivedData(data, sender);
+    MyAddon:HandleReceivedData(data, sender)
 end
 
-C_ChatInfo.RegisterAddonMessagePrefix(PREFIX);
+C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
 -- Register event handler for CHAT_MSG_ADDON
 ```
 
@@ -1434,29 +1434,29 @@ C_ChatInfo.RegisterAddonMessagePrefix(PREFIX);
 -- ## AllowAddOnTableAccess: 1
 
 -- In your main file:
-local addonName, ns = ...;
+local addonName, ns = ...
 
 -- Create public API in namespace
-ns.API = {};
+ns.API = {}
 
 function ns.API.GetVersion()
-    return ns.version;
+    return ns.version
 end
 
 function ns.API.GetPlayerData()
-    return ns.playerData;
+    return ns.playerData
 end
 
 function ns.API.RegisterCallback(event, callback)
     if ns.callbacks[event] then
-        tinsert(ns.callbacks[event], callback);
-        return true;
+        tinsert(ns.callbacks[event], callback)
+        return true
     end
-    return false;
+    return false
 end
 
 -- Mark what's private (convention)
-ns.Internal = {};  -- Other addons shouldn't access this
+ns.Internal = {}  -- Other addons shouldn't access this
 ```
 
 ### Accessing Other Addon's API
@@ -1465,30 +1465,30 @@ ns.Internal = {};  -- Other addons shouldn't access this
 -- Access another addon's namespace
 local function TryAccessOtherAddon(addonName)
     if not C_AddOns or not C_AddOns.GetAddOnLocalTable then
-        return nil;
+        return nil
     end
 
-    local otherNS = C_AddOns.GetAddOnLocalTable(addonName);
+    local otherNS = C_AddOns.GetAddOnLocalTable(addonName)
 
     if not otherNS then
-        print(addonName .. " not loaded or doesn't allow access");
-        return nil;
+        print(addonName .. " not loaded or doesn't allow access")
+        return nil
     end
 
     if not otherNS.API then
-        print(addonName .. " doesn't expose a public API");
-        return nil;
+        print(addonName .. " doesn't expose a public API")
+        return nil
     end
 
-    return otherNS.API;
+    return otherNS.API
 end
 
 -- Example: Integrating with another addon
 local function IntegrateWithDetailsAddon()
-    local detailsAPI = TryAccessOtherAddon("Details");
+    local detailsAPI = TryAccessOtherAddon("Details")
 
     if detailsAPI and detailsAPI.GetCurrentCombat then
-        local combat = detailsAPI.GetCurrentCombat();
+        local combat = detailsAPI.GetCurrentCombat()
         -- Use combat data
     end
 end
@@ -1499,23 +1499,23 @@ end
 ```lua
 -- Wait for addon to load before accessing
 EventUtil.ContinueOnAddOnLoaded("OtherAddon", function()
-    local api = C_AddOns.GetAddOnLocalTable("OtherAddon");
+    local api = C_AddOns.GetAddOnLocalTable("OtherAddon")
 
     if api and api.API then
         -- Safe to use the API now
-        MyAddon.OtherAddonAPI = api.API;
-        MyAddon:OnOtherAddonReady();
+        MyAddon.OtherAddonAPI = api.API
+        MyAddon:OnOtherAddonReady()
     end
-end);
+end)
 
 -- Version checking
 local function CheckAPIVersion(api, requiredVersion)
     if not api or not api.GetVersion then
-        return false;
+        return false
     end
 
-    local version = api.GetVersion();
-    return version >= requiredVersion;
+    local version = api.GetVersion()
+    return version >= requiredVersion
 end
 ```
 
@@ -1529,17 +1529,17 @@ end
 -- Check if player is in their house
 local function IsInHouse()
     if C_Housing and C_Housing.IsInsideHouse then
-        return C_Housing.IsInsideHouse();
+        return C_Housing.IsInsideHouse()
     end
-    return false;
+    return false
 end
 
 -- Check if in edit mode
 local function IsInHousingEditMode()
     if C_Housing and C_Housing.IsInEditMode then
-        return C_Housing.IsInEditMode();
+        return C_Housing.IsInEditMode()
     end
-    return false;
+    return false
 end
 
 -- Get current house info
@@ -1550,55 +1550,55 @@ local function GetCurrentHouseInfo()
         isInside = C_Housing.IsInsideHouse(),
         isOwner = C_Housing.IsOwnHouse and C_Housing.IsOwnHouse(),
         isEditing = C_Housing.IsInEditMode and C_Housing.IsInEditMode(),
-    };
+    }
 end
 ```
 
 ### Housing Event Handling
 
 ```lua
-local HousingMixin = {};
+local HousingMixin = {}
 
 function HousingMixin:OnLoad()
-    self:RegisterEvent("HOUSING_ENTERED");
-    self:RegisterEvent("HOUSING_EXITED");
-    self:RegisterEvent("HOUSING_EDIT_MODE_CHANGED");
-    self:RegisterEvent("HOUSING_FURNITURE_PLACED");
-    self:RegisterEvent("HOUSING_FURNITURE_REMOVED");
+    self:RegisterEvent("HOUSING_ENTERED")
+    self:RegisterEvent("HOUSING_EXITED")
+    self:RegisterEvent("HOUSING_EDIT_MODE_CHANGED")
+    self:RegisterEvent("HOUSING_FURNITURE_PLACED")
+    self:RegisterEvent("HOUSING_FURNITURE_REMOVED")
 end
 
 function HousingMixin:OnEvent(event, ...)
     if self[event] then
-        self[event](self, ...);
+        self[event](self, ...)
     end
 end
 
 function HousingMixin:HOUSING_ENTERED()
-    print("Entered housing area");
-    self:RefreshHousingUI();
+    print("Entered housing area")
+    self:RefreshHousingUI()
 end
 
 function HousingMixin:HOUSING_EXITED()
-    print("Left housing area");
-    self:HideHousingUI();
+    print("Left housing area")
+    self:HideHousingUI()
 end
 
 function HousingMixin:HOUSING_EDIT_MODE_CHANGED(isEditing)
     if isEditing then
-        self:EnableEditModeFeatures();
+        self:EnableEditModeFeatures()
     else
-        self:DisableEditModeFeatures();
+        self:DisableEditModeFeatures()
     end
 end
 
 function HousingMixin:HOUSING_FURNITURE_PLACED(furnitureID, x, y, z)
     -- Track placed furniture
-    self:OnFurniturePlaced(furnitureID, x, y, z);
+    self:OnFurniturePlaced(furnitureID, x, y, z)
 end
 
 function HousingMixin:HOUSING_FURNITURE_REMOVED(furnitureID)
     -- Update tracking
-    self:OnFurnitureRemoved(furnitureID);
+    self:OnFurnitureRemoved(furnitureID)
 end
 ```
 
@@ -1606,28 +1606,28 @@ end
 
 ```lua
 -- Addon that changes behavior in housing
-MyAddon = {};
+MyAddon = {}
 
 function MyAddon:Initialize()
     -- Check initial state
-    self:UpdateHousingState();
+    self:UpdateHousingState()
 
     -- Register for housing events
-    local frame = CreateFrame("Frame");
-    frame:RegisterEvent("HOUSING_ENTERED");
-    frame:RegisterEvent("HOUSING_EXITED");
+    local frame = CreateFrame("Frame")
+    frame:RegisterEvent("HOUSING_ENTERED")
+    frame:RegisterEvent("HOUSING_EXITED")
     frame:SetScript("OnEvent", function(_, event)
-        self:UpdateHousingState();
-    end);
+        self:UpdateHousingState()
+    end)
 end
 
 function MyAddon:UpdateHousingState()
-    self.isInHousing = C_Housing and C_Housing.IsInsideHouse and C_Housing.IsInsideHouse();
+    self.isInHousing = C_Housing and C_Housing.IsInsideHouse and C_Housing.IsInsideHouse()
 
     if self.isInHousing then
-        self:EnableHousingFeatures();
+        self:EnableHousingFeatures()
     else
-        self:EnableNormalFeatures();
+        self:EnableNormalFeatures()
     end
 end
 
@@ -1652,48 +1652,48 @@ end
 -- PREFER: Use ColorManager for item quality colors
 local function GetItemQualityColor(quality)
     if ColorManager and ColorManager.GetColorDataForItemQuality then
-        local colorData = ColorManager.GetColorDataForItemQuality(quality);
+        local colorData = ColorManager.GetColorDataForItemQuality(quality)
         if colorData then
-            return colorData:GetRGB();  -- Returns r, g, b
+            return colorData:GetRGB()  -- Returns r, g, b
         end
     end
 
     -- Fallback to constant table
-    local color = ITEM_QUALITY_COLORS[quality];
+    local color = ITEM_QUALITY_COLORS[quality]
     if color then
-        return color.r, color.g, color.b;
+        return color.r, color.g, color.b
     end
 
-    return 1, 1, 1;  -- White default
+    return 1, 1, 1  -- White default
 end
 
 -- AVOID: Hardcoded colors
--- local EPIC_COLOR = {r = 0.639, g = 0.208, b = 0.933};  -- Don't do this
+-- local EPIC_COLOR = {r = 0.639, g = 0.208, b = 0.933}  -- Don't do this
 ```
 
 ### Handling Color Override Events
 
 ```lua
 -- Colors can be overridden by accessibility settings
-local ColorAwareMixin = {};
+local ColorAwareMixin = {}
 
 function ColorAwareMixin:OnLoad()
-    self:RegisterEvent("COLOR_OVERRIDE_UPDATED");
-    self:UpdateColors();
+    self:RegisterEvent("COLOR_OVERRIDE_UPDATED")
+    self:UpdateColors()
 end
 
 function ColorAwareMixin:OnEvent(event)
     if event == "COLOR_OVERRIDE_UPDATED" then
-        self:UpdateColors();
+        self:UpdateColors()
     end
 end
 
 function ColorAwareMixin:UpdateColors()
     -- Refresh all color-dependent UI elements
     for _, element in pairs(self.coloredElements) do
-        local quality = element.itemQuality;
-        local r, g, b = GetItemQualityColor(quality);
-        element:SetTextColor(r, g, b);
+        local quality = element.itemQuality
+        local r, g, b = GetItemQualityColor(quality)
+        element:SetTextColor(r, g, b)
     end
 end
 ```
@@ -1705,19 +1705,19 @@ end
 local function GetSafeClassColor(classToken)
     -- ColorManager respects user overrides
     if ColorManager and ColorManager.GetClassColor then
-        local color = ColorManager.GetClassColor(classToken);
+        local color = ColorManager.GetClassColor(classToken)
         if color then
-            return color:GetRGB();
+            return color:GetRGB()
         end
     end
 
     -- Fallback
-    local color = RAID_CLASS_COLORS[classToken];
+    local color = RAID_CLASS_COLORS[classToken]
     if color then
-        return color.r, color.g, color.b;
+        return color.r, color.g, color.b
     end
 
-    return 1, 1, 1;
+    return 1, 1, 1
 end
 ```
 
@@ -1729,20 +1729,20 @@ end
 
 ```lua
 -- Lua doesn't have ternary, use 'and'/'or'
-local value = condition and trueValue or falseValue;
+local value = condition and trueValue or falseValue
 
 -- But beware: if trueValue is false/nil, this breaks!
-local value = someBoolean and false or "default";  -- WRONG: always returns "default"
+local value = someBoolean and false or "default"  -- WRONG: always returns "default"
 
 -- Safe version for all cases:
-local value = condition and trueValue or (not condition and falseValue);
+local value = condition and trueValue or (not condition and falseValue)
 
 -- Or just use if/else
-local value;
+local value
 if condition then
-    value = trueValue;
+    value = trueValue
 else
-    value = falseValue;
+    value = falseValue
 end
 ```
 
@@ -1750,15 +1750,15 @@ end
 
 ```lua
 -- Use 'or' for defaults
-local name = userName or "Unknown";
-local count = itemCount or 0;
+local name = userName or "Unknown"
+local count = itemCount or 0
 
 -- Function parameters
 function MyAddon:SetOption(key, value, updateUI)
-    updateUI = updateUI ~= false;  -- Default to true
-    self.options[key] = value;
+    updateUI = updateUI ~= false  -- Default to true
+    self.options[key] = value
     if updateUI then
-        self:UpdateUI();
+        self:UpdateUI()
     end
 end
 ```
@@ -1768,38 +1768,38 @@ end
 ```lua
 -- Cache expensive function results
 local memoizedFibonacci = (function()
-    local cache = {};
+    local cache = {}
     return function(n)
         if cache[n] then
-            return cache[n];
+            return cache[n]
         end
 
-        local result;
+        local result
         if n <= 1 then
-            result = n;
+            result = n
         else
-            result = memoizedFibonacci(n - 1) + memoizedFibonacci(n - 2);
+            result = memoizedFibonacci(n - 1) + memoizedFibonacci(n - 2)
         end
 
-        cache[n] = result;
-        return result;
-    end;
-end)();
+        cache[n] = result
+        return result
+    end
+end)()
 ```
 
 ### Method Call Syntax
 
 ```lua
 -- Colon syntax automatically passes self
-MyAddonMixin = {};
+MyAddonMixin = {}
 
 function MyAddonMixin:DoSomething(arg)
-    print(self, arg);
+    print(self, arg)
 end
 
 -- These are equivalent:
-myAddon:DoSomething("hello");
-MyAddonMixin.DoSomething(myAddon, "hello");
+myAddon:DoSomething("hello")
+MyAddonMixin.DoSomething(myAddon, "hello")
 ```
 
 ### Varargs Handling
@@ -1807,23 +1807,23 @@ MyAddonMixin.DoSomething(myAddon, "hello");
 ```lua
 -- Get argument count (includes nils)
 local function CountArgs(...)
-    return select("#", ...);
+    return select("#", ...)
 end
 
 -- Get nth argument
 local function GetArg(n, ...)
-    return (select(n, ...));
+    return (select(n, ...))
 end
 
 -- Get all args starting from n
 local function GetArgsFrom(n, ...)
-    return select(n, ...);
+    return select(n, ...)
 end
 
 -- Usage
-CountArgs(1, nil, 3);  -- Returns 3
-GetArg(2, "a", "b", "c");  -- Returns "b"
-GetArgsFrom(2, "a", "b", "c");  -- Returns "b", "c"
+CountArgs(1, nil, 3)  -- Returns 3
+GetArg(2, "a", "b", "c")  -- Returns "b"
+GetArgsFrom(2, "a", "b", "c")  -- Returns "b", "c"
 ```
 
 ---
@@ -1835,42 +1835,42 @@ GetArgsFrom(2, "a", "b", "c");  -- Returns "b", "c"
 ```lua
 -- Numeric comparison
 function SortUtil.CompareNumeric(lhs, rhs)
-    return Sign(lhs - rhs);
+    return Sign(lhs - rhs)
 end
 
 -- UTF-8 case-insensitive string comparison
 function SortUtil.CompareUtf8i(lhs, rhs)
-    return Sign(strcmputf8i(lhs, rhs));
+    return Sign(strcmputf8i(lhs, rhs))
 end
 
 -- Create sort manager
-local sortManager = SortUtil.CreateSortManager();
+local sortManager = SortUtil.CreateSortManager()
 
 -- Add comparators
 sortManager:InsertComparator("name", function(a, b)
-    return SortUtil.CompareUtf8i(a.name, b.name);
-end);
+    return SortUtil.CompareUtf8i(a.name, b.name)
+end)
 
 sortManager:InsertComparator("level", function(a, b)
-    return SortUtil.CompareNumeric(a.level, b.level);
-end);
+    return SortUtil.CompareNumeric(a.level, b.level)
+end)
 
 -- Set default comparator (required)
 sortManager:SetDefaultComparator(function(a, b)
-    return a.id < b.id;
-end);
+    return a.id < b.id
+end)
 
 -- Set sort order function
 sortManager:SetSortOrderFunc(function()
-    return currentSortOrder;
-end);
+    return currentSortOrder
+end)
 
 -- Get comparator for table.sort
-local comparator = sortManager:CreateComparator();
-table.sort(myTable, comparator);
+local comparator = sortManager:CreateComparator()
+table.sort(myTable, comparator)
 
 -- Toggle sort direction
-sortManager:ToggleSortAscending("name");
+sortManager:ToggleSortAscending("name")
 ```
 
 ---

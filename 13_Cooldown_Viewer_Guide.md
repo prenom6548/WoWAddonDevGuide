@@ -401,16 +401,16 @@ CooldownViewerMixin                    -- Base: item pool, aura map, layout, vis
 The system uses spell ID **61304** (a dummy GCD spell) to detect whether a spell's cooldown is actually just the GCD:
 
 ```lua
-local gcdInfo = C_Spell.GetSpellCooldown(61304);
+local gcdInfo = C_Spell.GetSpellCooldown(61304)
 -- If spell's startTime and duration match the GCD info exactly, it's on GCD
 local isOnGCD = (spellCooldownInfo.startTime == gcdInfo.startTime)
-            and (spellCooldownInfo.duration == gcdInfo.duration);
+            and (spellCooldownInfo.duration == gcdInfo.duration)
 ```
 
 **Simpler alternative (12.0.1+):** `SpellCooldownInfo.isOnGCD` is a `NeverSecret` boolean field on the return from `C_Spell.GetSpellCooldown()`. This eliminates the need to query the dummy spell 61304:
 
 ```lua
-local spellCooldownInfo = C_Spell.GetSpellCooldown(spellID);
+local spellCooldownInfo = C_Spell.GetSpellCooldown(spellID)
 if spellCooldownInfo.isOnGCD then
     -- This is just the GCD, not a real cooldown
 end
@@ -583,9 +583,9 @@ Each cooldown can have up to 4 linked spells (`linkedSpellIDs`). When a linked s
 The pandemic window is calculated using two APIs:
 
 ```lua
-local extendedDuration = C_UnitAuras.GetRefreshExtendedDuration("target", auraInstanceID, spellID);
-local baseDuration = C_UnitAuras.GetAuraBaseDuration("target", auraInstanceID, spellID);
-local carriedOverToNewCast = extendedDuration - baseDuration;
+local extendedDuration = C_UnitAuras.GetRefreshExtendedDuration("target", auraInstanceID, spellID)
+local baseDuration = C_UnitAuras.GetAuraBaseDuration("target", auraInstanceID, spellID)
+local carriedOverToNewCast = extendedDuration - baseDuration
 ```
 
 If `carriedOverToNewCast > 0`, the pandemic refresh window starts at `expirationTime - carriedOverToNewCast`. The pandemic alert only applies to **target debuffs** and only when the `PandemicTime` alert event type is configured.
@@ -1247,23 +1247,23 @@ All appearance setters have `SecretArguments = "AllowedWhenUntainted"`:
 
 ```lua
 -- Check if the system is available
-local isAvailable, failureReason = C_CooldownViewer.IsCooldownViewerAvailable();
+local isAvailable, failureReason = C_CooldownViewer.IsCooldownViewerAvailable()
 if not isAvailable then
     -- failureReason explains why (e.g., character level too low)
-    return;
+    return
 end
 
 -- Get all Essential cooldowns for the current spec
 local essentialIDs = C_CooldownViewer.GetCooldownViewerCategorySet(
     Enum.CooldownViewerCategory.Essential,
     false  -- only learned spells
-);
+)
 
 for _, cooldownID in ipairs(essentialIDs) do
-    local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID);
+    local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID)
     if info then
-        local spellName = C_Spell.GetSpellName(info.spellID);
-        local texture = C_Spell.GetSpellTexture(info.spellID);
+        local spellName = C_Spell.GetSpellName(info.spellID)
+        local texture = C_Spell.GetSpellTexture(info.spellID)
         -- Use cooldownID, spellName, texture...
     end
 end
@@ -1280,18 +1280,18 @@ local function FindCooldownIDForSpell(targetSpellID)
         Enum.CooldownViewerCategory.Utility,
         Enum.CooldownViewerCategory.TrackedBuff,
         Enum.CooldownViewerCategory.TrackedBar,
-    };
+    }
     
     for _, category in ipairs(categories) do
-        local cooldownIDs = C_CooldownViewer.GetCooldownViewerCategorySet(category, true);
+        local cooldownIDs = C_CooldownViewer.GetCooldownViewerCategorySet(category, true)
         for _, cooldownID in ipairs(cooldownIDs) do
-            local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID);
+            local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID)
             if info and info.spellID == targetSpellID then
-                return cooldownID, info;
+                return cooldownID, info
             end
         end
     end
-    return nil;
+    return nil
 end
 ```
 
@@ -1299,17 +1299,17 @@ end
 
 ```lua
 -- Read the raw serialized layout data
-local rawData = C_CooldownViewer.GetLayoutData();
+local rawData = C_CooldownViewer.GetLayoutData()
 
 -- The data is in the format: "encodingVersion|base64EncodedCBOR"
 -- To decode: Base64 -> Deflate decompress -> CBOR deserialize
 -- Use C_EncodingUtil APIs:
-local delimiterIndex = string.find(rawData, "|", 1, true);
+local delimiterIndex = string.find(rawData, "|", 1, true)
 if delimiterIndex then
-    local payload = string.sub(rawData, delimiterIndex + 1);
-    local decoded = C_EncodingUtil.DecodeBase64(payload);
-    local inflated = C_EncodingUtil.DecompressString(decoded, Enum.CompressionMethod.Deflate);
-    local dataTable = C_EncodingUtil.DeserializeCBOR(inflated);
+    local payload = string.sub(rawData, delimiterIndex + 1)
+    local decoded = C_EncodingUtil.DecodeBase64(payload)
+    local inflated = C_EncodingUtil.DecompressString(decoded, Enum.CompressionMethod.Deflate)
+    local dataTable = C_EncodingUtil.DeserializeCBOR(inflated)
     -- dataTable now contains the layout structure
 end
 ```
@@ -1322,19 +1322,19 @@ In WoW 12.0.1+, the standard `SetCooldown`, `SetCooldownDuration`, `SetCooldownF
 -- SAFE: Using Duration Objects (12.0.1+)
 local function SetupCooldownDisplay(cooldownFrame, spellID)
     -- Get a Duration object (not a raw number)
-    local durationObj = C_Spell.GetSpellCooldownDuration(spellID);
+    local durationObj = C_Spell.GetSpellCooldownDuration(spellID)
     if durationObj then
-        cooldownFrame:SetCooldownFromDurationObject(durationObj);
+        cooldownFrame:SetCooldownFromDurationObject(durationObj)
     else
-        cooldownFrame:Clear();
+        cooldownFrame:Clear()
     end
 end
 
 -- For item cooldowns (no native Duration API), synthesize manually:
 local function SetupItemCooldown(cooldownFrame, startTime, duration, modRate)
-    local dur = C_DurationUtil.CreateDuration();
-    dur:SetTimeFromStart(startTime, duration, modRate);
-    cooldownFrame:SetCooldownFromDurationObject(dur);
+    local dur = C_DurationUtil.CreateDuration()
+    dur:SetTimeFromStart(startTime, duration, modRate)
+    cooldownFrame:SetCooldownFromDurationObject(dur)
 end
 
 -- UNSAFE in 12.0.1+ (will error with secret values from tainted code):
@@ -1360,30 +1360,30 @@ Guard against redundant `SetCVar` calls to avoid CVar taint propagation.
 
 ```lua
 -- Create a Cooldown frame programmatically
-local myFrame = CreateFrame("Frame", nil, UIParent);
-myFrame:SetSize(50, 50);
-myFrame:SetPoint("CENTER");
+local myFrame = CreateFrame("Frame", nil, UIParent)
+myFrame:SetSize(50, 50)
+myFrame:SetPoint("CENTER")
 
-local icon = myFrame:CreateTexture(nil, "ARTWORK");
-icon:SetAllPoints();
+local icon = myFrame:CreateTexture(nil, "ARTWORK")
+icon:SetAllPoints()
 
-local cooldown = CreateFrame("Cooldown", nil, myFrame, "CooldownFrameTemplate");
-cooldown:SetAllPoints();
-cooldown:SetDrawEdge(false);
-cooldown:SetDrawBling(true);
-cooldown:SetHideCountdownNumbers(false);
+local cooldown = CreateFrame("Cooldown", nil, myFrame, "CooldownFrameTemplate")
+cooldown:SetAllPoints()
+cooldown:SetDrawEdge(false)
+cooldown:SetDrawBling(true)
+cooldown:SetHideCountdownNumbers(false)
 
 -- Use Duration objects for secret-safe cooldown display
 local function UpdateCooldown(spellID)
-    local durationObj = C_Spell.GetSpellCooldownDuration(spellID);
+    local durationObj = C_Spell.GetSpellCooldownDuration(spellID)
     if durationObj then
-        cooldown:SetCooldownFromDurationObject(durationObj);
+        cooldown:SetCooldownFromDurationObject(durationObj)
     else
-        cooldown:Clear();
+        cooldown:Clear()
     end
     
-    local texture = C_Spell.GetSpellTexture(spellID);
-    icon:SetTexture(texture);
+    local texture = C_Spell.GetSpellTexture(spellID)
+    icon:SetTexture(texture)
 end
 ```
 

@@ -98,6 +98,7 @@ When reviewing addons with multiple files:
 - API Migration Guide (~1,950 lines)
 
 **CRITICAL RULES** (remind subagent when delegating):
+- **No semicolons in Lua** — semicolons are optional and the WoW convention is to omit them
 - Use `ADDON_LOADED` event to initialize saved variables
 - Check `InCombatLockdown()` before restricted operations
 - Use modern C_* namespaced APIs (not deprecated globals)

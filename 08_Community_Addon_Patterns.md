@@ -37,8 +37,8 @@
 **Basic Ace3 Addon Structure:**
 ```lua
 -- MyAddon.lua
-local AddonName = "MyAddon";
-local MyAddon = LibStub("AceAddon-3.0"):NewAddon(AddonName, "AceConsole-3.0", "AceEvent-3.0");
+local AddonName = "MyAddon"
+local MyAddon = LibStub("AceAddon-3.0"):NewAddon(AddonName, "AceConsole-3.0", "AceEvent-3.0")
 
 -- Defaults
 local defaults = {
@@ -46,19 +46,19 @@ local defaults = {
         enabled = true,
         message = "Hello, World!",
     },
-};
+}
 
 function MyAddon:OnInitialize()
     -- Database
-    self.db = LibStub("AceDB-3.0"):New("MyAddonDB", defaults, true);
+    self.db = LibStub("AceDB-3.0"):New("MyAddonDB", defaults, true)
 
     -- Register slash command
-    self:RegisterChatCommand("myaddon", "ChatCommand");
+    self:RegisterChatCommand("myaddon", "ChatCommand")
 end
 
 function MyAddon:OnEnable()
     -- Register events
-    self:RegisterEvent("PLAYER_LOGIN");
+    self:RegisterEvent("PLAYER_LOGIN")
 end
 
 function MyAddon:OnDisable()
@@ -66,14 +66,14 @@ function MyAddon:OnDisable()
 end
 
 function MyAddon:PLAYER_LOGIN()
-    self:Print("MyAddon loaded!");
+    self:Print("MyAddon loaded!")
 end
 
 function MyAddon:ChatCommand(input)
     if not input or input:trim() == "" then
-        self:Print("Usage: /myaddon <command>");
+        self:Print("Usage: /myaddon <command>")
     else
-        self:Print("You said:", input);
+        self:Print("You said:", input)
     end
 end
 ```
@@ -161,25 +161,25 @@ MySimpleAddon.lua
 
 **MySimpleAddon.lua:**
 ```lua
-local AddonName = "MySimpleAddon";
-local DB;
+local AddonName = "MySimpleAddon"
+local DB
 
 -- Initialize
-local frame = CreateFrame("Frame");
-frame:RegisterEvent("ADDON_LOADED");
-frame:RegisterEvent("PLAYER_LOGIN");
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("PLAYER_LOGIN")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
-        local addonName = ...;
+        local addonName = ...
         if addonName == AddonName then
-            DB = MySimpleAddonDB or {};
-            MySimpleAddonDB = DB;
+            DB = MySimpleAddonDB or {}
+            MySimpleAddonDB = DB
         end
     elseif event == "PLAYER_LOGIN" then
-        print(AddonName, "loaded!");
+        print(AddonName, "loaded!")
     end
-end);
+end)
 ```
 
 ---
@@ -191,36 +191,36 @@ end);
 **Modern WoW settings integration:**
 
 ```lua
-local category = Settings.RegisterVerticalLayoutCategory("MyAddon");
+local category = Settings.RegisterVerticalLayoutCategory("MyAddon")
 
 -- Boolean setting
-local variable = "MyAddon_Enabled";
-local name = "Enable MyAddon";
-local tooltip = "Enable or disable the addon";
-local defaultValue = true;
+local variable = "MyAddon_Enabled"
+local name = "Enable MyAddon"
+local tooltip = "Enable or disable the addon"
+local defaultValue = true
 
-local setting = Settings.RegisterAddOnSetting(category, variable, variable, Settings.VarType.Boolean, name, defaultValue);
-Settings.CreateCheckbox(category, setting, tooltip);
+local setting = Settings.RegisterAddOnSetting(category, variable, variable, Settings.VarType.Boolean, name, defaultValue)
+Settings.CreateCheckbox(category, setting, tooltip)
 
 -- Dropdown setting
 local function GetOptions()
-    local container = Settings.CreateControlTextContainer();
-    container:Add("option1", "Option 1");
-    container:Add("option2", "Option 2");
-    container:Add("option3", "Option 3");
-    return container:GetData();
+    local container = Settings.CreateControlTextContainer()
+    container:Add("option1", "Option 1")
+    container:Add("option2", "Option 2")
+    container:Add("option3", "Option 3")
+    return container:GetData()
 end
 
-local variable = "MyAddon_DropdownValue";
-local name = "Dropdown Setting";
-local tooltip = "Select an option";
-local defaultValue = "option1";
+local variable = "MyAddon_DropdownValue"
+local name = "Dropdown Setting"
+local tooltip = "Select an option"
+local defaultValue = "option1"
 
-local setting = Settings.RegisterAddOnSetting(category, variable, variable, Settings.VarType.String, name, defaultValue);
-Settings.CreateDropdown(category, setting, GetOptions, tooltip);
+local setting = Settings.RegisterAddOnSetting(category, variable, variable, Settings.VarType.String, name, defaultValue)
+Settings.CreateDropdown(category, setting, GetOptions, tooltip)
 
 -- Register category
-Settings.RegisterAddOnCategory(category);
+Settings.RegisterAddOnCategory(category)
 ```
 
 ### Ace3Config Pattern
@@ -241,15 +241,15 @@ local options = {
             desc = "Enable/disable the addon",
             get = function(info) return MyAddon.db.profile.enabled; end,
             set = function(info, value)
-                MyAddon.db.profile.enabled = value;
+                MyAddon.db.profile.enabled = value
             end,
         },
     },
-};
+}
 
 -- Register options
-LibStub("AceConfig-3.0"):RegisterOptionsTable("MyAddon", options);
-LibStub("AceConfigDialog-3.0"):AddToBlizOptions("MyAddon", "MyAddon");
+LibStub("AceConfig-3.0"):RegisterOptionsTable("MyAddon", options)
+LibStub("AceConfigDialog-3.0"):AddToBlizOptions("MyAddon", "MyAddon")
 ```
 
 ---
@@ -259,25 +259,25 @@ LibStub("AceConfigDialog-3.0"):AddToBlizOptions("MyAddon", "MyAddon");
 ### Basic Slash Command
 
 ```lua
-SLASH_MYADDON1 = "/myaddon";
-SLASH_MYADDON2 = "/ma";
+SLASH_MYADDON1 = "/myaddon"
+SLASH_MYADDON2 = "/ma"
 
 SlashCmdList["MYADDON"] = function(msg, editBox)
-    local command, rest = msg:match("^(%S*)%s*(.-)$");
+    local command, rest = msg:match("^(%S*)%s*(.-)$")
 
     if command == "show" then
-        MyAddon:ShowFrame();
+        MyAddon:ShowFrame()
     elseif command == "hide" then
-        MyAddon:HideFrame();
+        MyAddon:HideFrame()
     elseif command == "config" then
-        MyAddon:OpenConfig();
+        MyAddon:OpenConfig()
     else
-        print("MyAddon commands:");
-        print("  /myaddon show - Show main frame");
-        print("  /myaddon hide - Hide main frame");
-        print("  /myaddon config - Open configuration");
+        print("MyAddon commands:")
+        print("  /myaddon show - Show main frame")
+        print("  /myaddon hide - Hide main frame")
+        print("  /myaddon config - Open configuration")
     end
-end;
+end
 ```
 
 ### Advanced Command Parsing
@@ -285,45 +285,45 @@ end;
 ```lua
 local commands = {
     ["show"] = function()
-        MyAddon:ShowFrame();
+        MyAddon:ShowFrame()
     end,
     ["hide"] = function()
-        MyAddon:HideFrame();
+        MyAddon:HideFrame()
     end,
     ["set"] = function(rest)
-        local key, value = rest:match("^(%S+)%s+(.+)$");
+        local key, value = rest:match("^(%S+)%s+(.+)$")
         if key and value then
-            MyAddonDB.settings[key] = value;
-            print("Set", key, "to", value);
+            MyAddonDB.settings[key] = value
+            print("Set", key, "to", value)
         else
-            print("Usage: /myaddon set <key> <value>");
+            print("Usage: /myaddon set <key> <value>")
         end
     end,
     ["get"] = function(rest)
-        local key = rest:match("^(%S+)");
+        local key = rest:match("^(%S+)")
         if key then
-            print(key, "=", tostring(MyAddonDB.settings[key]));
+            print(key, "=", tostring(MyAddonDB.settings[key]))
         else
-            print("Usage: /myaddon get <key>");
+            print("Usage: /myaddon get <key>")
         end
     end,
-};
+}
 
 SlashCmdList["MYADDON"] = function(msg)
-    local command, rest = msg:match("^(%S*)%s*(.-)$");
-    command = command:lower();
+    local command, rest = msg:match("^(%S*)%s*(.-)$")
+    command = command:lower()
 
-    local handler = commands[command];
+    local handler = commands[command]
     if handler then
-        handler(rest);
+        handler(rest)
     else
-        print("Unknown command:", command);
-        print("Available commands:");
+        print("Unknown command:", command)
+        print("Available commands:")
         for cmd in pairs(commands) do
-            print("  /myaddon", cmd);
+            print("  /myaddon", cmd)
         end
     end
-end;
+end
 ```
 
 ---
@@ -336,20 +336,20 @@ end;
 
 ```lua
 -- Check if library already loaded
-local lib = LibStub:GetLibrary("MyLib-1.0", true);
+local lib = LibStub:GetLibrary("MyLib-1.0", true)
 if lib then
-    return lib;  -- Already loaded
+    return lib  -- Already loaded
 end
 
 -- Create new library
-local lib = LibStub:NewLibrary("MyLib-1.0", 1);  -- Name, version
+local lib = LibStub:NewLibrary("MyLib-1.0", 1)  -- Name, version
 if not lib then
-    return;  -- Older version already loaded
+    return  -- Older version already loaded
 end
 
 -- Library implementation
 function lib:DoSomething()
-    print("Library function called!");
+    print("Library function called!")
 end
 ```
 
@@ -361,26 +361,26 @@ end
 
 ```lua
 -- MyLib.lua
-local MAJOR, MINOR = "MyLib-1.0", 1;
-local lib = LibStub:NewLibrary(MAJOR, MINOR);
+local MAJOR, MINOR = "MyLib-1.0", 1
+local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return; end
 
 -- Embed mixin
-lib.embeds = lib.embeds or {};
+lib.embeds = lib.embeds or {}
 
 function lib:Embed(target)
     for k, v in pairs(self) do
         if type(v) == "function" and k ~= "Embed" then
-            target[k] = v;
+            target[k] = v
         end
     end
-    self.embeds[target] = true;
+    self.embeds[target] = true
 end
 
 -- Usage
-MyAddon = {};
-LibStub("MyLib-1.0"):Embed(MyAddon);
-MyAddon:DoSomething();  -- Library method now available
+MyAddon = {}
+LibStub("MyLib-1.0"):Embed(MyAddon)
+MyAddon:DoSomething()  -- Library method now available
 ```
 
 ---
@@ -390,17 +390,17 @@ MyAddon:DoSomething();  -- Library method now available
 ### Simple Localization (No Library)
 
 ```lua
-local L = {};
+local L = {}
 
 if GetLocale() == "deDE" then
-    L["WELCOME"] = "Willkommen!";
+    L["WELCOME"] = "Willkommen!"
 elseif GetLocale() == "frFR" then
-    L["WELCOME"] = "Bienvenue!";
+    L["WELCOME"] = "Bienvenue!"
 else
-    L["WELCOME"] = "Welcome!";
+    L["WELCOME"] = "Welcome!"
 end
 
-print(L["WELCOME"]);
+print(L["WELCOME"])
 ```
 
 ### AceLocale Localization
@@ -409,22 +409,22 @@ print(L["WELCOME"]);
 
 ```lua
 -- Locales/enUS.lua
-local L = LibStub("AceLocale-3.0"):NewLocale("MyAddon", "enUS", true);
+local L = LibStub("AceLocale-3.0"):NewLocale("MyAddon", "enUS", true)
 if not L then return; end
 
-L["WELCOME_MESSAGE"] = "Welcome to MyAddon!";
-L["OPTION_ENABLED"] = "Enabled";
+L["WELCOME_MESSAGE"] = "Welcome to MyAddon!"
+L["OPTION_ENABLED"] = "Enabled"
 
 -- Locales/deDE.lua
-local L = LibStub("AceLocale-3.0"):NewLocale("MyAddon", "deDE");
+local L = LibStub("AceLocale-3.0"):NewLocale("MyAddon", "deDE")
 if not L then return; end
 
-L["WELCOME_MESSAGE"] = "Willkommen bei MyAddon!";
-L["OPTION_ENABLED"] = "Aktiviert";
+L["WELCOME_MESSAGE"] = "Willkommen bei MyAddon!"
+L["OPTION_ENABLED"] = "Aktiviert"
 
 -- Usage in code
-local L = LibStub("AceLocale-3.0"):GetLocale("MyAddon");
-print(L["WELCOME_MESSAGE"]);
+local L = LibStub("AceLocale-3.0"):GetLocale("MyAddon")
+print(L["WELCOME_MESSAGE"])
 ```
 
 ---
@@ -487,19 +487,19 @@ local defaults = {
         setting1 = true,
         setting2 = "value",
     },
-};
+}
 
-MyAddon.db = LibStub("AceDB-3.0"):New("MyAddonDB", defaults, true);
+MyAddon.db = LibStub("AceDB-3.0"):New("MyAddonDB", defaults, true)
 
 -- Access current profile
-local profile = MyAddon.db.profile;
-print(profile.setting1);
+local profile = MyAddon.db.profile
+print(profile.setting1)
 
 -- Change profile
-MyAddon.db:SetProfile("ProfileName");
+MyAddon.db:SetProfile("ProfileName")
 
 -- Reset profile
-MyAddon.db:ResetProfile();
+MyAddon.db:ResetProfile()
 ```
 
 ---
@@ -509,36 +509,36 @@ MyAddon.db:ResetProfile();
 ### Version Check Pattern
 
 ```lua
-local CURRENT_VERSION = "1.2.3";
+local CURRENT_VERSION = "1.2.3"
 
 -- Parse version string
 local function ParseVersion(versionString)
-    local major, minor, patch = versionString:match("(%d+)%.(%d+)%.(%d+)");
-    return tonumber(major), tonumber(minor), tonumber(patch);
+    local major, minor, patch = versionString:match("(%d+)%.(%d+)%.(%d+)")
+    return tonumber(major), tonumber(minor), tonumber(patch)
 end
 
 -- Compare versions
 local function IsNewerVersion(v1, v2)
-    local major1, minor1, patch1 = ParseVersion(v1);
-    local major2, minor2, patch2 = ParseVersion(v2);
+    local major1, minor1, patch1 = ParseVersion(v1)
+    local major2, minor2, patch2 = ParseVersion(v2)
 
     if major1 > major2 then return true; end
     if major1 < major2 then return false; end
     if minor1 > minor2 then return true; end
     if minor1 < minor2 then return false; end
-    return patch1 > patch2;
+    return patch1 > patch2
 end
 
 -- Check for updates
 function MyAddon:CheckVersion()
     if not MyAddonDB.lastVersion then
         -- First install
-        MyAddonDB.lastVersion = CURRENT_VERSION;
-        self:ShowWelcomeMessage();
+        MyAddonDB.lastVersion = CURRENT_VERSION
+        self:ShowWelcomeMessage()
     elseif IsNewerVersion(CURRENT_VERSION, MyAddonDB.lastVersion) then
         -- Updated
-        self:ShowUpdateMessage(MyAddonDB.lastVersion, CURRENT_VERSION);
-        MyAddonDB.lastVersion = CURRENT_VERSION;
+        self:ShowUpdateMessage(MyAddonDB.lastVersion, CURRENT_VERSION)
+        MyAddonDB.lastVersion = CURRENT_VERSION
     end
 end
 ```
@@ -555,16 +555,16 @@ local CHANGELOG = {
     ["1.2.2"] = {
         "Fixed critical bug",
     },
-};
+}
 
 function MyAddon:ShowChangelog(fromVersion, toVersion)
-    print(format("|cff00ff00%s updated from %s to %s|r", AddonName, fromVersion, toVersion));
+    print(format("|cff00ff00%s updated from %s to %s|r", AddonName, fromVersion, toVersion))
 
     for version, changes in pairs(CHANGELOG) do
         if IsNewerVersion(version, fromVersion) and not IsNewerVersion(version, toVersion) then
-            print(format("|cffFFFF00Version %s:|r", version));
+            print(format("|cffFFFF00Version %s:|r", version))
             for _, change in ipairs(changes) do
-                print(format("  - %s", change));
+                print(format("  - %s", change))
             end
         end
     end
@@ -580,25 +580,25 @@ end
 ```lua
 -- Throttle function calls
 local function CreateThrottle(delay)
-    local lastUpdate = 0;
+    local lastUpdate = 0
     return function(callback)
-        local now = GetTime();
+        local now = GetTime()
         if now - lastUpdate >= delay then
-            lastUpdate = now;
-            callback();
+            lastUpdate = now
+            callback()
         end
-    end;
+    end
 end
 
 -- Usage
-local throttledUpdate = CreateThrottle(0.5);  -- Max once per 0.5 seconds
+local throttledUpdate = CreateThrottle(0.5)  -- Max once per 0.5 seconds
 
 frame:SetScript("OnUpdate", function()
     throttledUpdate(function()
         -- Expensive update code
-        MyAddon:RefreshDisplay();
-    end);
-end);
+        MyAddon:RefreshDisplay()
+    end)
+end)
 ```
 
 ### Debouncing
@@ -606,22 +606,22 @@ end);
 ```lua
 -- Debounce: Only call after activity stops
 local function CreateDebounce(delay)
-    local timer;
+    local timer
     return function(callback)
         if timer then
-            timer:Cancel();
+            timer:Cancel()
         end
-        timer = C_Timer.NewTimer(delay, callback);
-    end;
+        timer = C_Timer.NewTimer(delay, callback)
+    end
 end
 
 -- Usage
-local debouncedSave = CreateDebounce(1.0);  -- Wait 1 second after last change
+local debouncedSave = CreateDebounce(1.0)  -- Wait 1 second after last change
 
 function MyAddon:OnSettingChanged()
     debouncedSave(function()
-        MyAddon:SaveSettings();
-    end);
+        MyAddon:SaveSettings()
+    end)
 end
 ```
 
@@ -633,20 +633,20 @@ end
 
 local function ProfileFunction(funcName, func)
     return function(...)
-        local startTime = debugprofilestop();
-        local results = {func(...)};
-        local elapsed = debugprofilestop() - startTime;
+        local startTime = debugprofilestop()
+        local results = {func(...)}
+        local elapsed = debugprofilestop() - startTime
 
         if elapsed > 1 then  -- Log slow calls (>1ms)
-            print(format("%s took %.2fms", funcName, elapsed));
+            print(format("%s took %.2fms", funcName, elapsed))
         end
 
-        return unpack(results);
-    end;
+        return unpack(results)
+    end
 end
 
 -- Wrap expensive functions
-MyAddon.ExpensiveFunction = ProfileFunction("ExpensiveFunction", MyAddon.ExpensiveFunction);
+MyAddon.ExpensiveFunction = ProfileFunction("ExpensiveFunction", MyAddon.ExpensiveFunction)
 ```
 
 ---
@@ -779,41 +779,41 @@ end)
 **Migration Strategy:**
 ```lua
 -- Check for official encounter systems
-local hasEncounterTimeline = C_EncounterTimeline ~= nil;
-local hasEncounterWarnings = C_EncounterWarnings ~= nil;
+local hasEncounterTimeline = C_EncounterTimeline ~= nil
+local hasEncounterWarnings = C_EncounterWarnings ~= nil
 
 -- Modern boss mod initialization
 function BossMod:OnEncounterStart(encounterID, encounterName, difficultyID, groupSize)
     -- Check if official timeline is available
     if hasEncounterTimeline then
-        local phases = C_EncounterTimeline.GetEncounterPhases(encounterID);
+        local phases = C_EncounterTimeline.GetEncounterPhases(encounterID)
         if phases then
-            self:IntegrateOfficialPhases(phases);
+            self:IntegrateOfficialPhases(phases)
         end
     end
 
     -- Register for official warnings to avoid duplicates
     if hasEncounterWarnings then
-        self:RegisterCallback(C_EncounterWarnings, "OnWarningDisplayed", "HandleOfficialWarning");
+        self:RegisterCallback(C_EncounterWarnings, "OnWarningDisplayed", "HandleOfficialWarning")
     end
 end
 
 -- Handle secret values for boss health
 function BossMod:GetBossHealth(unit)
-    local health = UnitHealth(unit);
-    local maxHealth = UnitHealthMax(unit);
+    local health = UnitHealth(unit)
+    local maxHealth = UnitHealthMax(unit)
 
     -- In 12.0, use UnitHealthPercent for more reliable data
-    local percent = UnitHealthPercent and UnitHealthPercent(unit);
+    local percent = UnitHealthPercent and UnitHealthPercent(unit)
     if percent then
-        return percent;  -- Returns 0-100, handles secrets gracefully
+        return percent  -- Returns 0-100, handles secrets gracefully
     end
 
     -- Fallback for older API
     if maxHealth > 0 then
-        return (health / maxHealth) * 100;
+        return (health / maxHealth) * 100
     end
-    return 0;
+    return 0
 end
 
 -- Supplement rather than replace official warnings
@@ -821,11 +821,11 @@ function BossMod:DisplayWarning(warningType, spellID, text)
     -- Check if official warning system will handle this
     if hasEncounterWarnings and C_EncounterWarnings.HasWarningForSpell(spellID) then
         -- Official system handles it - optionally add supplemental info
-        return;
+        return
     end
 
     -- Display custom warning
-    self:ShowWarningFrame(warningType, text);
+    self:ShowWarningFrame(warningType, text)
 end
 ```
 
@@ -845,79 +845,79 @@ end
 local function GetActionSlotInfo(slot)
     -- 12.0: Must use C_ActionBar namespace
     if C_ActionBar.GetActionInfo then
-        local actionType, id, subType = C_ActionBar.GetActionInfo(slot);
-        return actionType, id, subType;
+        local actionType, id, subType = C_ActionBar.GetActionInfo(slot)
+        return actionType, id, subType
     end
-    return nil;
+    return nil
 end
 
 -- Modern action pickup
 local function PickupActionSlot(slot)
     if C_ActionBar.PickupAction then
-        C_ActionBar.PickupAction(slot);
+        C_ActionBar.PickupAction(slot)
     end
 end
 
 -- Modern action placement
 local function PlaceActionInSlot(slot)
     if C_ActionBar.PlaceAction then
-        C_ActionBar.PlaceAction(slot);
+        C_ActionBar.PlaceAction(slot)
     end
 end
 
 -- Modern action bar page management
 local function GetCurrentActionBarPage()
     if C_ActionBar.GetCurrentPage then
-        return C_ActionBar.GetCurrentPage();
+        return C_ActionBar.GetCurrentPage()
     end
-    return 1;
+    return 1
 end
 
 -- Check if action has range
 local function IsActionInRange(slot, unit)
     if C_ActionBar.IsActionInRange then
-        return C_ActionBar.IsActionInRange(slot, unit);
+        return C_ActionBar.IsActionInRange(slot, unit)
     end
-    return nil;
+    return nil
 end
 
 -- Get action cooldown
 local function GetActionCooldownInfo(slot)
     if C_ActionBar.GetActionCooldown then
-        return C_ActionBar.GetActionCooldown(slot);
+        return C_ActionBar.GetActionCooldown(slot)
     end
-    return 0, 0, 0;
+    return 0, 0, 0
 end
 
 -- Full compatibility wrapper for action bar addons
-local ActionBarCompat = {};
+local ActionBarCompat = {}
 
 function ActionBarCompat:Initialize()
     -- Verify required APIs exist
-    assert(C_ActionBar, "C_ActionBar namespace required for 12.0+");
-    assert(C_ActionBar.GetActionInfo, "C_ActionBar.GetActionInfo required");
-    assert(C_ActionBar.HasAction, "C_ActionBar.HasAction required");
+    assert(C_ActionBar, "C_ActionBar namespace required for 12.0+")
+    assert(C_ActionBar.GetActionInfo, "C_ActionBar.GetActionInfo required")
+    assert(C_ActionBar.HasAction, "C_ActionBar.HasAction required")
 end
 
 function ActionBarCompat:HasAction(slot)
-    return C_ActionBar.HasAction(slot);
+    return C_ActionBar.HasAction(slot)
 end
 
 function ActionBarCompat:GetActionTexture(slot)
-    return C_ActionBar.GetActionTexture(slot);
+    return C_ActionBar.GetActionTexture(slot)
 end
 
 function ActionBarCompat:GetActionText(slot)
-    return C_ActionBar.GetActionText(slot);
+    return C_ActionBar.GetActionText(slot)
 end
 
 function ActionBarCompat:GetActionCharges(slot)
-    return C_ActionBar.GetActionCharges(slot);
+    return C_ActionBar.GetActionCharges(slot)
 end
 
 function ActionBarCompat:IsUsableAction(slot)
-    local usable, noMana, noRange = C_ActionBar.IsUsableAction(slot);
-    return usable, noMana;
+    local usable, noMana, noRange = C_ActionBar.IsUsableAction(slot)
+    return usable, noMana
 end
 ```
 
@@ -933,67 +933,67 @@ end
 -- Modern unit health display with secret handling
 local function GetUnitHealthDisplay(unit)
     -- 12.0: Use percentage functions for reliable display
-    local percent = UnitHealthPercent and UnitHealthPercent(unit);
+    local percent = UnitHealthPercent and UnitHealthPercent(unit)
 
     if percent then
         -- Reliable percentage even with secrets
-        local maxHealth = UnitHealthMax(unit);
-        local displayHealth = math.floor(maxHealth * percent / 100);
-        return displayHealth, maxHealth, percent;
+        local maxHealth = UnitHealthMax(unit)
+        local displayHealth = math.floor(maxHealth * percent / 100)
+        return displayHealth, maxHealth, percent
     end
 
     -- Fallback
-    local health = UnitHealth(unit);
-    local maxHealth = UnitHealthMax(unit);
-    local calcPercent = maxHealth > 0 and (health / maxHealth * 100) or 0;
-    return health, maxHealth, calcPercent;
+    local health = UnitHealth(unit)
+    local maxHealth = UnitHealthMax(unit)
+    local calcPercent = maxHealth > 0 and (health / maxHealth * 100) or 0
+    return health, maxHealth, calcPercent
 end
 
 -- Modern power display
 local function GetUnitPowerDisplay(unit, powerType)
-    local percent = UnitPowerPercent and UnitPowerPercent(unit, powerType);
+    local percent = UnitPowerPercent and UnitPowerPercent(unit, powerType)
 
     if percent then
-        local maxPower = UnitPowerMax(unit, powerType);
-        local displayPower = math.floor(maxPower * percent / 100);
-        return displayPower, maxPower, percent;
+        local maxPower = UnitPowerMax(unit, powerType)
+        local displayPower = math.floor(maxPower * percent / 100)
+        return displayPower, maxPower, percent
     end
 
-    local power = UnitPower(unit, powerType);
-    local maxPower = UnitPowerMax(unit, powerType);
-    local calcPercent = maxPower > 0 and (power / maxPower * 100) or 0;
-    return power, maxPower, calcPercent;
+    local power = UnitPower(unit, powerType)
+    local maxPower = UnitPowerMax(unit, powerType)
+    local calcPercent = maxPower > 0 and (power / maxPower * 100) or 0
+    return power, maxPower, calcPercent
 end
 
 -- Health bar update with secrets awareness
 function UnitFrameMixin:UpdateHealth()
-    local displayHealth, maxHealth, percent = GetUnitHealthDisplay(self.unit);
+    local displayHealth, maxHealth, percent = GetUnitHealthDisplay(self.unit)
 
-    self.healthBar:SetMinMaxValues(0, maxHealth);
-    self.healthBar:SetValue(displayHealth);
+    self.healthBar:SetMinMaxValues(0, maxHealth)
+    self.healthBar:SetValue(displayHealth)
 
     -- Display percentage for accuracy during secrets
     if self.healthText then
         if self.showPercentage then
-            self.healthText:SetText(format("%.0f%%", percent));
+            self.healthText:SetText(format("%.0f%%", percent))
         else
-            self.healthText:SetText(AbbreviateNumber(displayHealth));
+            self.healthText:SetText(AbbreviateNumber(displayHealth))
         end
     end
 end
 
 -- Incoming heal prediction with secrets handling
 function UnitFrameMixin:UpdateHealPrediction()
-    local _, maxHealth, percent = GetUnitHealthDisplay(self.unit);
-    local incomingHeal = UnitGetIncomingHeals(self.unit) or 0;
-    local absorb = UnitGetTotalAbsorbs(self.unit) or 0;
+    local _, maxHealth, percent = GetUnitHealthDisplay(self.unit)
+    local incomingHeal = UnitGetIncomingHeals(self.unit) or 0
+    local absorb = UnitGetTotalAbsorbs(self.unit) or 0
 
     -- Calculate based on percentages for consistency
-    local currentPercent = percent / 100;
-    local healPercent = maxHealth > 0 and (incomingHeal / maxHealth) or 0;
-    local absorbPercent = maxHealth > 0 and (absorb / maxHealth) or 0;
+    local currentPercent = percent / 100
+    local healPercent = maxHealth > 0 and (incomingHeal / maxHealth) or 0
+    local absorbPercent = maxHealth > 0 and (absorb / maxHealth) or 0
 
-    self:SetHealPredictionBars(currentPercent, healPercent, absorbPercent);
+    self:SetHealPredictionBars(currentPercent, healPercent, absorbPercent)
 end
 ```
 
@@ -1007,63 +1007,63 @@ end
 **Migration Strategy:**
 ```lua
 -- Check for 12.0 transmog API
-local hasNewTransmogAPI = C_TransmogOutfitInfo ~= nil;
+local hasNewTransmogAPI = C_TransmogOutfitInfo ~= nil
 
 -- Modern outfit management
-local TransmogCompat = {};
+local TransmogCompat = {}
 
 function TransmogCompat:GetOutfits()
     if hasNewTransmogAPI and C_TransmogOutfitInfo.GetOutfits then
-        return C_TransmogOutfitInfo.GetOutfits();
+        return C_TransmogOutfitInfo.GetOutfits()
     end
     -- Legacy fallback
-    return C_TransmogCollection and C_TransmogCollection.GetOutfits() or {};
+    return C_TransmogCollection and C_TransmogCollection.GetOutfits() or {}
 end
 
 function TransmogCompat:GetOutfitInfo(outfitID)
     if hasNewTransmogAPI and C_TransmogOutfitInfo.GetOutfitInfo then
-        return C_TransmogOutfitInfo.GetOutfitInfo(outfitID);
+        return C_TransmogOutfitInfo.GetOutfitInfo(outfitID)
     end
-    return nil;
+    return nil
 end
 
 function TransmogCompat:SaveOutfit(name, sources)
     if hasNewTransmogAPI and C_TransmogOutfitInfo.SaveOutfit then
-        return C_TransmogOutfitInfo.SaveOutfit(name, sources);
+        return C_TransmogOutfitInfo.SaveOutfit(name, sources)
     end
     -- Legacy
     if C_TransmogCollection and C_TransmogCollection.SaveOutfit then
-        return C_TransmogCollection.SaveOutfit(name, sources);
+        return C_TransmogCollection.SaveOutfit(name, sources)
     end
-    return false;
+    return false
 end
 
 function TransmogCompat:DeleteOutfit(outfitID)
     if hasNewTransmogAPI and C_TransmogOutfitInfo.DeleteOutfit then
-        return C_TransmogOutfitInfo.DeleteOutfit(outfitID);
+        return C_TransmogOutfitInfo.DeleteOutfit(outfitID)
     end
     if C_TransmogCollection and C_TransmogCollection.DeleteOutfit then
-        return C_TransmogCollection.DeleteOutfit(outfitID);
+        return C_TransmogCollection.DeleteOutfit(outfitID)
     end
 end
 
 function TransmogCompat:GetSlotSources(slotID)
     if hasNewTransmogAPI and C_TransmogOutfitInfo.GetSlotSources then
-        return C_TransmogOutfitInfo.GetSlotSources(slotID);
+        return C_TransmogOutfitInfo.GetSlotSources(slotID)
     end
     if C_TransmogCollection then
-        return C_TransmogCollection.GetAppearanceSources(slotID);
+        return C_TransmogCollection.GetAppearanceSources(slotID)
     end
-    return {};
+    return {}
 end
 
 -- Apply outfit
 function TransmogCompat:ApplyOutfit(outfitID)
     if hasNewTransmogAPI and C_TransmogOutfitInfo.ApplyOutfit then
-        C_TransmogOutfitInfo.ApplyOutfit(outfitID);
-        return true;
+        C_TransmogOutfitInfo.ApplyOutfit(outfitID)
+        return true
     end
-    return false;
+    return false
 end
 ```
 
@@ -1077,54 +1077,54 @@ end
 **Migration Strategy:**
 ```lua
 -- Check for removed/moved APIs
-local hasVoidStorage = C_VoidStorage ~= nil;
-local hasNewSocketAPI = C_ItemSocketInfo ~= nil;
+local hasVoidStorage = C_VoidStorage ~= nil
+local hasNewSocketAPI = C_ItemSocketInfo ~= nil
 
 -- Socket API compatibility
 local function GetItemSockets(itemLink)
     if hasNewSocketAPI and C_ItemSocketInfo.GetItemSockets then
-        return C_ItemSocketInfo.GetItemSockets(itemLink);
+        return C_ItemSocketInfo.GetItemSockets(itemLink)
     end
     -- Legacy fallback
     if GetItemStats then
-        local stats = GetItemStats(itemLink);
-        return stats and stats["EMPTY_SOCKET_RED"] or 0;
+        local stats = GetItemStats(itemLink)
+        return stats and stats["EMPTY_SOCKET_RED"] or 0
     end
-    return 0;
+    return 0
 end
 
 function GetSocketInfo(socketIndex)
     if hasNewSocketAPI and C_ItemSocketInfo.GetSocketInfo then
-        return C_ItemSocketInfo.GetSocketInfo(socketIndex);
+        return C_ItemSocketInfo.GetSocketInfo(socketIndex)
     end
     -- Legacy
-    return GetExistingSocketInfo and GetExistingSocketInfo(socketIndex);
+    return GetExistingSocketInfo and GetExistingSocketInfo(socketIndex)
 end
 
 -- Void Storage handling - gracefully removed
 local function HasVoidStorageAccess()
     if not hasVoidStorage then
-        return false;  -- Feature removed in 11.2.0
+        return false  -- Feature removed in 11.2.0
     end
-    return CanUseVoidStorage and CanUseVoidStorage();
+    return CanUseVoidStorage and CanUseVoidStorage()
 end
 
 -- Bank compatibility with Warband bank
 local function GetBankSlotInfo(bagIndex, slotIndex)
     -- Check for Warband bank API
     if C_Bank and C_Bank.GetBankSlotInfo then
-        return C_Bank.GetBankSlotInfo(bagIndex, slotIndex);
+        return C_Bank.GetBankSlotInfo(bagIndex, slotIndex)
     end
     -- Legacy
-    return GetContainerItemInfo(bagIndex, slotIndex);
+    return GetContainerItemInfo(bagIndex, slotIndex)
 end
 
 -- Modern container iteration
 local function IterateBagSlots(bagID, callback)
-    local numSlots = C_Container.GetContainerNumSlots(bagID);
+    local numSlots = C_Container.GetContainerNumSlots(bagID)
     for slot = 1, numSlots do
-        local itemInfo = C_Container.GetContainerItemInfo(bagID, slot);
-        callback(slot, itemInfo);
+        local itemInfo = C_Container.GetContainerItemInfo(bagID, slot)
+        callback(slot, itemInfo)
     end
 end
 
@@ -1289,20 +1289,20 @@ Several community libraries may need updates or have native replacements in 12.0
 -- 12.0 native encoding utilities
 if C_EncodingUtil then
     -- Serialize data to string
-    local encoded = C_EncodingUtil.EncodeTable(myTable);
+    local encoded = C_EncodingUtil.EncodeTable(myTable)
 
     -- Deserialize string to data
-    local decoded = C_EncodingUtil.DecodeTable(encoded);
+    local decoded = C_EncodingUtil.DecodeTable(encoded)
 
     -- Compress string
-    local compressed = C_EncodingUtil.CompressString(largeString);
+    local compressed = C_EncodingUtil.CompressString(largeString)
 
     -- Decompress string
-    local decompressed = C_EncodingUtil.DecompressString(compressed);
+    local decompressed = C_EncodingUtil.DecompressString(compressed)
 else
     -- Fallback to libraries
-    local LibSerialize = LibStub("LibSerialize");
-    local LibDeflate = LibStub("LibDeflate");
+    local LibSerialize = LibStub("LibSerialize")
+    local LibDeflate = LibStub("LibDeflate")
 end
 ```
 
@@ -1310,24 +1310,24 @@ end
 ```lua
 -- 12.0 native Lua extensions
 -- table.create(narr, nrec) - Pre-allocate table memory
-local t = table.create(100, 0);  -- 100 array slots, 0 hash slots
+local t = table.create(100, 0)  -- 100 array slots, 0 hash slots
 
 -- table.count(t) - Count all entries (both array and hash)
-local count = table.count(myTable);
+local count = table.count(myTable)
 
 -- These reduce need for custom implementations
 local function CreatePooledTable(size)
-    return table.create(size, 0);
+    return table.create(size, 0)
 end
 
 local function GetTableSize(t)
     if table.count then
-        return table.count(t);
+        return table.count(t)
     end
     -- Fallback
-    local count = 0;
+    local count = 0
     for _ in pairs(t) do count = count + 1; end
-    return count;
+    return count
 end
 ```
 
@@ -1353,30 +1353,30 @@ end
 -- Verify libraries load without error
 local function CheckLibraryCompat(libName)
     local success, lib = pcall(function()
-        return LibStub(libName);
-    end);
+        return LibStub(libName)
+    end)
 
     if success and lib then
-        print(format("%s loaded successfully", libName));
-        return true;
+        print(format("%s loaded successfully", libName))
+        return true
     else
-        print(format("%s FAILED to load: %s", libName, tostring(lib)));
-        return false;
+        print(format("%s FAILED to load: %s", libName, tostring(lib)))
+        return false
     end
 end
 
 -- Check critical libraries
-CheckLibraryCompat("AceAddon-3.0");
-CheckLibraryCompat("AceDB-3.0");
-CheckLibraryCompat("AceConfig-3.0");
-CheckLibraryCompat("LibDBIcon-1.0");
+CheckLibraryCompat("AceAddon-3.0")
+CheckLibraryCompat("AceDB-3.0")
+CheckLibraryCompat("AceConfig-3.0")
+CheckLibraryCompat("LibDBIcon-1.0")
 ```
 
 ### Migration Helper
 
 ```lua
 -- Helper module for detecting 12.0 API changes
-local APICompat = {};
+local APICompat = {}
 
 APICompat.features = {
     hasHousing = C_Housing ~= nil,
@@ -1390,24 +1390,24 @@ APICompat.features = {
     hasNewSocketAPI = C_ItemSocketInfo ~= nil,
     hasTableCreate = table.create ~= nil,
     hasTableCount = table.count ~= nil,
-};
+}
 
 function APICompat:PrintCompatReport()
-    print("=== 12.0 API Compatibility Report ===");
+    print("=== 12.0 API Compatibility Report ===")
     for feature, available in pairs(self.features) do
-        local status = available and "|cff00ff00YES|r" or "|cffff0000NO|r";
-        print(format("  %s: %s", feature, status));
+        local status = available and "|cff00ff00YES|r" or "|cffff0000NO|r"
+        print(format("  %s: %s", feature, status))
     end
 end
 
 function APICompat:RequiresFeature(featureName)
     if not self.features[featureName] then
-        error(format("Required feature '%s' not available in this WoW version", featureName));
+        error(format("Required feature '%s' not available in this WoW version", featureName))
     end
 end
 
 -- Export for other addons
-_G.APICompat = APICompat;
+_G.APICompat = APICompat
 ```
 
 ---

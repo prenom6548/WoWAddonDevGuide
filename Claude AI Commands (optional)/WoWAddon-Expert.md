@@ -21,6 +21,10 @@ All documentation files are in GUIDE_DIR. All addons should be saved to ADDONS_D
 
 You are an expert World of Warcraft addon developer with deep knowledge of Lua, WoW API, XML UI framework, and modern addon development patterns.
 
+## CRITICAL: No Semicolons in Lua
+
+**Do NOT use semicolons in Lua code.** Semicolons are optional in Lua and the WoW addon convention is to omit them. Write `print("test")` not `print("test");`. This applies to all Lua code you write, edit, or generate — addon code, code examples, documentation snippets, everything.
+
 ## CRITICAL: Debug Output Rule
 
 **NEVER use print() for debug output. EVER.** Debug output MUST go to a scrollable, copy-pasteable EditBox window - NOT the chat frame. If the addon already has a debug system (e.g., `/npdebug` for NeatPlates), USE IT. If not, CREATE ONE. This is non-negotiable.

@@ -193,29 +193,29 @@ LibStub is a minimalist library loader that allows multiple addons to share the 
 
 ```lua
 -- LibStub.lua
-LibStub = LibStub or {};
-local LIBSTUB_MAJOR, LIBSTUB_MINOR = "LibStub", 4;
+LibStub = LibStub or {}
+local LIBSTUB_MAJOR, LIBSTUB_MINOR = "LibStub", 4
 
 function LibStub:NewLibrary(major, minor)
-    assert(type(major) == "string", "Bad argument #2 to `NewLibrary' (string expected)");
-    minor = assert(tonumber(minor), "Bad argument #2 to `NewLibrary' (number expected)");
+    assert(type(major) == "string", "Bad argument #2 to `NewLibrary' (string expected)")
+    minor = assert(tonumber(minor), "Bad argument #2 to `NewLibrary' (number expected)")
 
-    local oldminor = self.minors[major];
+    local oldminor = self.minors[major]
     if oldminor and oldminor >= minor then
-        return nil;  -- Older version, don't load
+        return nil  -- Older version, don't load
     end
 
-    self.minors[major] = minor;
-    self.libs[major] = self.libs[major] or {};
+    self.minors[major] = minor
+    self.libs[major] = self.libs[major] or {}
 
-    return self.libs[major];
+    return self.libs[major]
 end
 
 function LibStub:GetLibrary(major, silent)
     if not self.libs[major] and not silent then
-        error(("Cannot find a library instance of %q."):format(tostring(major)), 2);
+        error(("Cannot find a library instance of %q."):format(tostring(major)), 2)
     end
-    return self.libs[major], self.minors[major];
+    return self.libs[major], self.minors[major]
 end
 ```
 
@@ -224,10 +224,10 @@ end
 **Loading a library:**
 ```lua
 -- Get library (error if not found)
-local AceAddon = LibStub("AceAddon-3.0");
+local AceAddon = LibStub("AceAddon-3.0")
 
 -- Get library (silent, returns nil if not found)
-local AceAddon = LibStub("AceAddon-3.0", true);
+local AceAddon = LibStub("AceAddon-3.0", true)
 
 -- Check if library exists
 if LibStub:GetLibrary("LibDataBroker-1.1", true) then
@@ -237,13 +237,13 @@ end
 
 **Creating a library:**
 ```lua
-local MAJOR, MINOR = "MyLib-1.0", 1;
-local lib = LibStub:NewLibrary(MAJOR, MINOR);
-if not lib then return; end  -- Older version already loaded
+local MAJOR, MINOR = "MyLib-1.0", 1
+local lib = LibStub:NewLibrary(MAJOR, MINOR)
+if not lib then return end  -- Older version already loaded
 
 -- Define library functions
 function lib:DoSomething()
-    print("Library function!");
+    print("Library function!")
 end
 ```
 
@@ -277,7 +277,7 @@ LibDataBroker allows addons to publish data that can be displayed by various dis
 #### Creating a Data Source
 
 ```lua
-local LDB = LibStub("LibDataBroker-1.1");
+local LDB = LibStub("LibDataBroker-1.1")
 
 -- Create data object
 local dataObj = LDB:NewDataObject("MyAddon", {
@@ -288,21 +288,21 @@ local dataObj = LDB:NewDataObject("MyAddon", {
 
     OnClick = function(frame, button)
         if button == "LeftButton" then
-            print("Left clicked!");
+            print("Left clicked!")
         elseif button == "RightButton" then
-            print("Right clicked!");
+            print("Right clicked!")
         end
     end,
 
     OnTooltipShow = function(tooltip)
-        tooltip:AddLine("My Addon");
-        tooltip:AddLine("Click for more info");
+        tooltip:AddLine("My Addon")
+        tooltip:AddLine("Click for more info")
     end,
-});
+})
 
 -- Update data
 function UpdateData()
-    dataObj.text = format("%d gold", GetMoney() / 10000);
+    dataObj.text = format("%d gold", GetMoney() / 10000)
 end
 ```
 
@@ -319,22 +319,22 @@ end
 #### Consuming Data Sources
 
 ```lua
-local LDB = LibStub("LibDataBroker-1.1");
+local LDB = LibStub("LibDataBroker-1.1")
 
 -- Get all data objects
 for name, obj in LDB:DataObjectIterator() do
-    print(name, obj.type, obj.text);
+    print(name, obj.type, obj.text)
 end
 
 -- Register callback for new objects
 LDB.RegisterCallback(addon, "LibDataBroker_DataObjectCreated", function(event, name, dataobj)
-    print("New data object:", name);
-end);
+    print("New data object:", name)
+end)
 
 -- Attribute changed callback
 LDB.RegisterCallback(addon, "LibDataBroker_AttributeChanged", function(event, name, attr, value)
-    print("Data object", name, "changed", attr, "to", value);
-end);
+    print("Data object", name, "changed", attr, "to", value)
+end)
 ```
 
 ### LibDBIcon-1.0
@@ -342,8 +342,8 @@ end);
 **Minimap icon library (uses LibDataBroker).**
 
 ```lua
-local LDB = LibStub("LibDataBroker-1.1");
-local LDBIcon = LibStub("LibDBIcon-1.0");
+local LDB = LibStub("LibDataBroker-1.1")
+local LDBIcon = LibStub("LibDBIcon-1.0")
 
 -- Create data broker object
 local dataObj = LDB:NewDataObject("MyAddon", {
@@ -351,21 +351,21 @@ local dataObj = LDB:NewDataObject("MyAddon", {
     icon = "Interface\\Icons\\INV_Misc_QuestionMark",
     OnClick = function(frame, button)
         if button == "LeftButton" then
-            MyAddon:ToggleFrame();
+            MyAddon:ToggleFrame()
         end
     end,
-});
+})
 
 -- Register minimap icon
-LDBIcon:Register("MyAddon", dataObj, self.db.profile.minimap);
+LDBIcon:Register("MyAddon", dataObj, self.db.profile.minimap)
 
 -- Hide/show minimap icon
-LDBIcon:Hide("MyAddon");
-LDBIcon:Show("MyAddon");
+LDBIcon:Hide("MyAddon")
+LDBIcon:Show("MyAddon")
 
 -- Check if shown
 if LDBIcon:IsRegistered("MyAddon") then
-    print("Icon is registered");
+    print("Icon is registered")
 end
 ```
 
@@ -379,7 +379,7 @@ local defaults = {
             radius = 80,
         },
     },
-};
+}
 ```
 
 ---
@@ -391,29 +391,29 @@ local defaults = {
 **Shared font, sound, and texture resources.**
 
 ```lua
-local LSM = LibStub("LibSharedMedia-3.0");
+local LSM = LibStub("LibSharedMedia-3.0")
 
 -- Get media
-local font = LSM:Fetch("font", "Friz Quadrata TT");
-local sound = LSM:Fetch("sound", "Auction House Open");
-local statusbar = LSM:Fetch("statusbar", "Blizzard");
-local background = LSM:Fetch("background", "Blizzard Dialog Background");
-local border = LSM:Fetch("border", "Blizzard Tooltip");
+local font = LSM:Fetch("font", "Friz Quadrata TT")
+local sound = LSM:Fetch("sound", "Auction House Open")
+local statusbar = LSM:Fetch("statusbar", "Blizzard")
+local background = LSM:Fetch("background", "Blizzard Dialog Background")
+local border = LSM:Fetch("border", "Blizzard Tooltip")
 
 -- List available media
-local fonts = LSM:List("font");
+local fonts = LSM:List("font")
 for i, fontName in ipairs(fonts) do
-    print(fontName);
+    print(fontName)
 end
 
 -- Register your own media
-LSM:Register("font", "My Custom Font", [[Interface\AddOns\MyAddon\Fonts\MyFont.ttf]]);
-LSM:Register("statusbar", "My Texture", [[Interface\AddOns\MyAddon\Textures\StatusBar]]);
+LSM:Register("font", "My Custom Font", [[Interface\AddOns\MyAddon\Fonts\MyFont.ttf]])
+LSM:Register("statusbar", "My Texture", [[Interface\AddOns\MyAddon\Textures\StatusBar]])
 
 -- Callback when media added
 LSM.RegisterCallback(addon, "LibSharedMedia_Registered", function(event, mediaType, key)
-    print("New media registered:", mediaType, key);
-end);
+    print("New media registered:", mediaType, key)
+end)
 ```
 
 **Media Types:**
@@ -428,23 +428,23 @@ end);
 **Accurate range checking.**
 
 ```lua
-local LRC = LibStub("LibRangeCheck-3.0");
+local LRC = LibStub("LibRangeCheck-3.0")
 
 -- Get range to unit
-local minRange, maxRange = LRC:GetRange("target");
+local minRange, maxRange = LRC:GetRange("target")
 
 if maxRange then
     if maxRange < 5 then
-        print("Melee range");
+        print("Melee range")
     elseif maxRange < 30 then
-        print("Medium range");
+        print("Medium range")
     else
-        print("Long range");
+        print("Long range")
     end
 end
 
 -- Check specific range
-local inRange = LRC:GetRange("target", 40);  -- Within 40 yards?
+local inRange = LRC:GetRange("target", 40)  -- Within 40 yards?
 ```
 
 ### LibDeflate
@@ -454,18 +454,18 @@ local inRange = LRC:GetRange("target", 40);  -- Within 40 yards?
 **Note (11.1.5+):** For new addons, consider using native `C_EncodingUtil.CompressString()` and `C_EncodingUtil.EncodeBase64()` instead. See Native API Alternatives section.
 
 ```lua
-local LibDeflate = LibStub:GetLibrary("LibDeflate");
+local LibDeflate = LibStub:GetLibrary("LibDeflate")
 
 -- Compress data
-local original = "This is a long string to compress...";
-local compressed = LibDeflate:CompressDeflate(original);
-local encoded = LibDeflate:EncodeForPrint(compressed);
+local original = "This is a long string to compress..."
+local compressed = LibDeflate:CompressDeflate(original)
+local encoded = LibDeflate:EncodeForPrint(compressed)
 
 -- Decompress data
-local decoded = LibDeflate:DecodeForPrint(encoded);
-local decompressed = LibDeflate:DecompressDeflate(decoded);
+local decoded = LibDeflate:DecodeForPrint(encoded)
+local decompressed = LibDeflate:DecompressDeflate(decoded)
 
-print(original == decompressed);  -- true
+print(original == decompressed)  -- true
 ```
 
 **Use cases:**
@@ -483,7 +483,7 @@ print(original == decompressed);  -- true
 **Better popup dialogs than StaticPopup.**
 
 ```lua
-local LibDialog = LibStub("LibDialog-1.0");
+local LibDialog = LibStub("LibDialog-1.0")
 
 -- Create dialog
 LibDialog:Register("MYADDON_CONFIRM", {
@@ -492,17 +492,17 @@ LibDialog:Register("MYADDON_CONFIRM", {
         {
             text = "Yes",
             on_click = function()
-                MyAddon:ResetDatabase();
+                MyAddon:ResetDatabase()
             end,
         },
         {
             text = "No",
         },
     },
-});
+})
 
 -- Show dialog
-LibDialog:Spawn("MYADDON_CONFIRM");
+LibDialog:Spawn("MYADDON_CONFIRM")
 ```
 
 ### LibWindow-1.1
@@ -510,19 +510,19 @@ LibDialog:Spawn("MYADDON_CONFIRM");
 **Save window positions.**
 
 ```lua
-local LibWindow = LibStub("LibWindow-1.1");
+local LibWindow = LibStub("LibWindow-1.1")
 
 -- Save window position
-LibWindow.SavePosition(frame);
+LibWindow.SavePosition(frame)
 
 -- Restore window position
-LibWindow.RestorePosition(frame);
+LibWindow.RestorePosition(frame)
 
 -- Make window movable
-LibWindow.MakeDraggable(frame);
+LibWindow.MakeDraggable(frame)
 
 -- Register for automatic save/restore
-LibWindow.RegisterConfig(frame, self.db.profile.windowPos);
+LibWindow.RegisterConfig(frame, self.db.profile.windowPos)
 ```
 
 ---
@@ -534,19 +534,19 @@ LibWindow.RegisterConfig(frame, self.db.profile.windowPos);
 **Inspect group member specs.**
 
 ```lua
-local LGIST = LibStub("LibGroupInSpecT-1.1");
+local LGIST = LibStub("LibGroupInSpecT-1.1")
 
 -- Get unit spec
 LGIST.RegisterCallback(self, "GroupInSpecT_Update", function(event, guid, unit, info)
     if info then
-        local specID = info.global_spec_id;
-        local specName = info.spec_name_localized;
-        print(unit, "is", specName);
+        local specID = info.global_spec_id
+        local specName = info.spec_name_localized
+        print(unit, "is", specName)
     end
-end);
+end)
 
 -- Get current data
-local data = LGIST:GetCachedInfo(guid);
+local data = LGIST:GetCachedInfo(guid)
 ```
 
 ### LibClassicDurations
@@ -558,17 +558,17 @@ local data = LGIST:GetCachedInfo(guid);
 **Glow effects for action buttons.**
 
 ```lua
-local LCG = LibStub("LibCustomGlow-1.0");
+local LCG = LibStub("LibCustomGlow-1.0")
 
 -- Add glow
-LCG.ButtonGlow_Start(button);
-LCG.PixelGlow_Start(button);
-LCG.AutoCastGlow_Start(button);
+LCG.ButtonGlow_Start(button)
+LCG.PixelGlow_Start(button)
+LCG.AutoCastGlow_Start(button)
 
 -- Remove glow
-LCG.ButtonGlow_Stop(button);
-LCG.PixelGlow_Stop(button);
-LCG.AutoCastGlow_Stop(button);
+LCG.ButtonGlow_Stop(button)
+LCG.PixelGlow_Stop(button)
+LCG.AutoCastGlow_Stop(button)
 ```
 
 **Note (12.0.0):** LibCustomGlow may need updates due to action bar API changes. Check for updated versions.
@@ -664,24 +664,24 @@ Libraries can be "embedded" into your addon, copying their functions into your a
 
 **Without embedding:**
 ```lua
-local AceEvent = LibStub("AceEvent-3.0");
-AceEvent:RegisterEvent(MyAddon, "PLAYER_LOGIN", function() ... end);
+local AceEvent = LibStub("AceEvent-3.0")
+AceEvent:RegisterEvent(MyAddon, "PLAYER_LOGIN", function() ... end)
 ```
 
 **With embedding:**
 ```lua
-local MyAddon = LibStub("AceAddon-3.0"):NewAddon("MyAddon", "AceEvent-3.0");
-MyAddon:RegisterEvent("PLAYER_LOGIN");  -- Method is now part of MyAddon
+local MyAddon = LibStub("AceAddon-3.0"):NewAddon("MyAddon", "AceEvent-3.0")
+MyAddon:RegisterEvent("PLAYER_LOGIN")  -- Method is now part of MyAddon
 ```
 
 ### Manual Embedding
 
 ```lua
-local lib = LibStub("SomeLibrary-1.0");
-lib:Embed(MyAddon);
+local lib = LibStub("SomeLibrary-1.0")
+lib:Embed(MyAddon)
 
 -- Now MyAddon has all of lib's methods
-MyAddon:SomeLibraryMethod();
+MyAddon:SomeLibraryMethod()
 ```
 
 ---
@@ -817,10 +817,10 @@ end
 
 **Always specify library version:**
 ```lua
-local lib = LibStub("MyLib-1.0", true);  -- Silent if not found
+local lib = LibStub("MyLib-1.0", true)  -- Silent if not found
 if not lib then
     -- Library not available, provide fallback
-    return;
+    return
 end
 ```
 

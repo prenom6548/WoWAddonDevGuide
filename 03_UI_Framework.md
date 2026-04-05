@@ -161,23 +161,23 @@ WoW uses a composition-based approach with mixins instead of inheritance.
 
 **Basic Mixin Creation:**
 ```lua
-MyAddonFrameMixin = {};
+MyAddonFrameMixin = {}
 
 function MyAddonFrameMixin:OnLoad()
-    self:RegisterEvent("PLAYER_LOGIN");
-    self:RegisterEvent("PLAYER_LOGOUT");
+    self:RegisterEvent("PLAYER_LOGIN")
+    self:RegisterEvent("PLAYER_LOGOUT")
 end
 
 function MyAddonFrameMixin:OnEvent(event, ...)
     if event == "PLAYER_LOGIN" then
-        self:Initialize();
+        self:Initialize()
     elseif event == "PLAYER_LOGOUT" then
-        self:SaveData();
+        self:SaveData()
     end
 end
 
 function MyAddonFrameMixin:Initialize()
-    print("MyAddon initialized!");
+    print("MyAddon initialized!")
 end
 ```
 
@@ -196,7 +196,7 @@ end
 Combine multiple mixins for composition:
 
 ```lua
-ScrollBoxListViewMixin = CreateFromMixins(ScrollBoxViewMixin, CallbackRegistryMixin);
+ScrollBoxListViewMixin = CreateFromMixins(ScrollBoxViewMixin, CallbackRegistryMixin)
 
 ScrollBoxListViewMixin:GenerateCallbackEvents({
     "OnDataChanged",
@@ -204,14 +204,14 @@ ScrollBoxListViewMixin:GenerateCallbackEvents({
     "OnAcquiredFrame",
     "OnInitializedFrame",
     "OnReleasedFrame",
-});
+})
 
 function ScrollBoxListViewMixin:Init()
-    CallbackRegistryMixin.OnLoad(self);
-    ScrollBoxViewMixin.Init(self);
+    CallbackRegistryMixin.OnLoad(self)
+    ScrollBoxViewMixin.Init(self)
 
-    self.frameFactory = CreateFrameFactory();
-    self.initializers = {};
+    self.frameFactory = CreateFrameFactory()
+    self.initializers = {}
 end
 ```
 
@@ -228,28 +228,28 @@ end
 Blizzard uses `_Intrinsic` suffix for framework internals:
 
 ```lua
-EventFrameMixin = CreateFromMixins(CallbackRegistryMixin);
+EventFrameMixin = CreateFromMixins(CallbackRegistryMixin)
 
 EventFrameMixin:GenerateCallbackEvents({
     "OnHide",
     "OnShow",
     "OnSizeChanged",
-});
+})
 
 function EventFrameMixin:OnLoad_Intrinsic()
-    CallbackRegistryMixin.OnLoad(self);
+    CallbackRegistryMixin.OnLoad(self)
 end
 
 function EventFrameMixin:OnHide_Intrinsic()
-    self:TriggerEvent("OnHide");
+    self:TriggerEvent("OnHide")
 end
 
 function EventFrameMixin:OnShow_Intrinsic()
-    self:TriggerEvent("OnShow");
+    self:TriggerEvent("OnShow")
 end
 
 function EventFrameMixin:OnSizeChanged_Intrinsic(width, height)
-    self:TriggerEvent("OnSizeChanged", width, height);
+    self:TriggerEvent("OnSizeChanged", width, height)
 end
 ```
 
@@ -266,40 +266,40 @@ end
 Efficient layout updates using dirty marking:
 
 ```lua
-BaseLayoutMixin = {};
+BaseLayoutMixin = {}
 
 function BaseLayoutMixin:OnShow()
     if not self.skipLayoutOnShow then
-        self:Layout();
+        self:Layout()
     end
 end
 
 function BaseLayoutMixin:MarkDirty()
-    self.dirty = true;
+    self.dirty = true
 
     -- Only set OnUpdate while marked dirty for performance
-    self:SetScript("OnUpdate", self.OnUpdate);
+    self:SetScript("OnUpdate", self.OnUpdate)
 
     -- Propagate to parent layout frames
-    local parent = self:GetParent();
+    local parent = self:GetParent()
     while parent do
         if IsLayoutFrame(parent) then
-            parent:MarkDirty();
-            return;
+            parent:MarkDirty()
+            return
         end
-        parent = parent:GetParent();
+        parent = parent:GetParent()
     end
 end
 
 function BaseLayoutMixin:OnUpdate()
     if self:IsDirty() then
-        self:Layout();
+        self:Layout()
     end
 end
 
 function BaseLayoutMixin:Layout()
-    self.dirty = false;
-    self:SetScript("OnUpdate", nil);  -- Remove OnUpdate when clean
+    self.dirty = false
+    self:SetScript("OnUpdate", nil)  -- Remove OnUpdate when clean
 
     -- Perform actual layout...
 end
@@ -387,8 +387,8 @@ HIGHLIGHT (z=4) - Mouseover highlights
 
 ```lua
 -- In code:
-frame.Icon:SetAtlas("UI-HUD-ActionBar-IconFrame-Background");
-frame.Icon:SetAtlas("UI-HUD-ActionBar-IconFrame-Flash", true);  -- useAtlasSize
+frame.Icon:SetAtlas("UI-HUD-ActionBar-IconFrame-Background")
+frame.Icon:SetAtlas("UI-HUD-ActionBar-IconFrame-Flash", true)  -- useAtlasSize
 ```
 
 **TexCoords (Legacy):**
@@ -404,8 +404,8 @@ frame.Icon:SetAtlas("UI-HUD-ActionBar-IconFrame-Flash", true);  -- useAtlasSize
 
 ```lua
 -- In code:
-frame.Border:SetTexture("Interface\\Buttons\\UI-Debuff-Overlays");
-frame.Border:SetTexCoord(0.296875, 0.5703125, 0, 0.515625);
+frame.Border:SetTexture("Interface\\Buttons\\UI-Debuff-Overlays")
+frame.Border:SetTexCoord(0.296875, 0.5703125, 0, 0.515625)
 ```
 
 **Source:** `Blizzard_BuffFrame\BuffFrameTemplates.xml`
@@ -462,18 +462,18 @@ Anchors position and size frames relative to others:
 **In Code:**
 ```lua
 -- Single anchor
-frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0);
+frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 
 -- Multiple anchors
-scrollbar:SetPoint("TOPLEFT", parent, "TOPRIGHT", 5, -10);
-scrollbar:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT", 5, 10);
+scrollbar:SetPoint("TOPLEFT", parent, "TOPRIGHT", 5, -10)
+scrollbar:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT", 5, 10)
 
 -- Relative to sibling
-frame.Count:SetPoint("BOTTOMRIGHT", frame.Icon, "BOTTOMRIGHT", -2, 2);
+frame.Count:SetPoint("BOTTOMRIGHT", frame.Icon, "BOTTOMRIGHT", -2, 2)
 
 -- Clear and reset
-frame:ClearAllPoints();
-frame:SetAllPoints(parent);
+frame:ClearAllPoints()
+frame:SetAllPoints(parent)
 ```
 
 **Anchor Points:**
@@ -1067,26 +1067,26 @@ Modern WoW uses layout frames for automatic positioning:
 Replaced HybridScrollFrame in recent versions:
 
 ```lua
-local scrollBox = CreateFrame("Frame", nil, parent, "WowScrollBoxList");
-local scrollBar = CreateFrame("EventFrame", nil, parent, "MinimalScrollBar");
+local scrollBox = CreateFrame("Frame", nil, parent, "WowScrollBoxList")
+local scrollBar = CreateFrame("EventFrame", nil, parent, "MinimalScrollBar")
 
-scrollBox:SetPoint("TOPLEFT", 10, -10);
-scrollBox:SetPoint("BOTTOMRIGHT", scrollBar, "BOTTOMLEFT", -5, 10);
-scrollBar:SetPoint("TOPRIGHT", -10, -10);
-scrollBar:SetPoint("BOTTOMRIGHT", -10, 10);
+scrollBox:SetPoint("TOPLEFT", 10, -10)
+scrollBox:SetPoint("BOTTOMRIGHT", scrollBar, "BOTTOMLEFT", -5, 10)
+scrollBar:SetPoint("TOPRIGHT", -10, -10)
+scrollBar:SetPoint("BOTTOMRIGHT", -10, 10)
 
-local view = CreateScrollBoxListLinearView();
+local view = CreateScrollBoxListLinearView()
 view:SetElementInitializer("MyButtonTemplate", function(button, elementData)
-    button:SetText(elementData.name);
-    button.data = elementData;
-end);
+    button:SetText(elementData.name)
+    button.data = elementData
+end)
 
-ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, view);
+ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, view)
 
-local dataProvider = CreateDataProvider();
-dataProvider:Insert({name = "Item 1"});
-dataProvider:Insert({name = "Item 2"});
-scrollBox:SetDataProvider(dataProvider);
+local dataProvider = CreateDataProvider()
+dataProvider:Insert({name = "Item 1"})
+dataProvider:Insert({name = "Item 2"})
+scrollBox:SetDataProvider(dataProvider)
 ```
 
 **Source:** `Blizzard_SharedXML\Shared\Scroll\ScrollBox.lua`
@@ -1114,28 +1114,28 @@ Older scroll system still widely used:
 
 ```lua
 local function buttonInit(button, elementData)
-    button:SetText(elementData.name);
+    button:SetText(elementData.name)
 end
 
-HybridScrollFrame_SetDoNotHideScrollBar(MyScrollFrame, true);
-HybridScrollFrame_CreateButtons(MyScrollFrame, "MyButtonTemplate", 0, -1, "TOPLEFT", "TOPLEFT", 0, -1, "TOP", "BOTTOM");
+HybridScrollFrame_SetDoNotHideScrollBar(MyScrollFrame, true)
+HybridScrollFrame_CreateButtons(MyScrollFrame, "MyButtonTemplate", 0, -1, "TOPLEFT", "TOPLEFT", 0, -1, "TOP", "BOTTOM")
 
-local scrollData = {};
+local scrollData = {}
 for i = 1, 100 do
-    table.insert(scrollData, {name = "Item " .. i});
+    table.insert(scrollData, {name = "Item " .. i})
 end
 
-local scrollOffset = HybridScrollFrame_GetOffset(MyScrollFrame);
-HybridScrollFrame_Update(MyScrollFrame, #scrollData * 20, MyScrollFrame:GetHeight());
+local scrollOffset = HybridScrollFrame_GetOffset(MyScrollFrame)
+HybridScrollFrame_Update(MyScrollFrame, #scrollData * 20, MyScrollFrame:GetHeight())
 
 for i = 1, #MyScrollFrame.buttons do
-    local button = MyScrollFrame.buttons[i];
-    local dataIndex = i + scrollOffset;
+    local button = MyScrollFrame.buttons[i]
+    local dataIndex = i + scrollOffset
     if dataIndex <= #scrollData then
-        buttonInit(button, scrollData[dataIndex]);
-        button:Show();
+        buttonInit(button, scrollData[dataIndex])
+        button:Show()
     else
-        button:Hide();
+        button:Hide()
     end
 end
 ```
@@ -1185,11 +1185,11 @@ local backdrop = {
     tileSize = 32,
     edgeSize = 32,
     insets = {left = 11, right = 12, top = 12, bottom = 11},
-};
+}
 
-frame:SetBackdrop(backdrop);
-frame:SetBackdropColor(0.1, 0.1, 0.1, 0.5);
-frame:SetBackdropBorderColor(1, 1, 1, 1);
+frame:SetBackdrop(backdrop)
+frame:SetBackdropColor(0.1, 0.1, 0.1, 0.5)
+frame:SetBackdropBorderColor(1, 1, 1, 1)
 ```
 
 **Modern NineSlice:**
@@ -1205,9 +1205,9 @@ local layout = {
     BottomEdge = {atlas = "UI-Frame-Bottom", tileHorizontal = true},
     BottomRightCorner = {atlas = "UI-Frame-BottomRight"},
     mirrorLayout = true,
-};
+}
 
-NineSliceUtil.ApplyLayout(frame, layout);
+NineSliceUtil.ApplyLayout(frame, layout)
 ```
 
 **Source:** `Blizzard_SharedXML\NineSlice.lua`, `Blizzard_SharedXML\Backdrop.lua`
@@ -1236,39 +1236,39 @@ Frame pooling is critical for performance when creating many short-lived frames.
 
 ```lua
 -- Create factory
-local factory = CreateFrameFactory();
+local factory = CreateFrameFactory()
 
 -- Acquire frame from pool or create new
-local frame, isNew = factory:Create(parent, "Button", resetterFunc);
+local frame, isNew = factory:Create(parent, "Button", resetterFunc)
 
 if isNew then
     -- Initialize new frame
-    frame:SetSize(100, 30);
+    frame:SetSize(100, 30)
 end
 
 -- Use frame...
-frame:SetText("Hello");
-frame:Show();
+frame:SetText("Hello")
+frame:Show()
 
 -- Release back to pool
-factory:Release(frame);
+factory:Release(frame)
 
 -- Release all frames
-factory:ReleaseAll();
+factory:ReleaseAll()
 ```
 
 **Custom Resetter Function:**
 ```lua
 local function ResetButton(pool, button)
-    button:Hide();
-    button:ClearAllPoints();
-    button:SetText("");
-    button:SetEnabled(true);
-    button.data = nil;
+    button:Hide()
+    button:ClearAllPoints()
+    button:SetText("")
+    button:SetEnabled(true)
+    button.data = nil
 end
 
-local factory = CreateFrameFactory();
-factory:SetResetterFunction(ResetButton);
+local factory = CreateFrameFactory()
+factory:SetResetterFunction(ResetButton)
 ```
 
 **Source:** `Blizzard_SharedXML\Shared\Scroll\ScrollBoxListView.lua`
@@ -1279,34 +1279,34 @@ Temporary accessors link pooled frames to their data:
 
 ```lua
 function ScrollBoxListViewMixin:AssignAccessors(frame, elementData)
-    local view = self;
+    local view = self
 
     -- Get underlying data
     frame.GetData = function(self)
-        return view:TranslateElementDataToUnderlyingData(elementData);
-    end;
+        return view:TranslateElementDataToUnderlyingData(elementData)
+    end
 
     -- Get element data
     frame.GetElementData = function(self)
-        return elementData;
-    end;
+        return elementData
+    end
 
     -- Get index
     frame.GetElementDataIndex = function(self)
-        return view:FindElementDataIndex(elementData);
-    end;
+        return view:FindElementDataIndex(elementData)
+    end
 
     -- Match element data
     frame.ElementDataMatches = function(self, elementData)
-        return self:GetElementData() == elementData;
-    end;
+        return self:GetElementData() == elementData
+    end
 end
 
 function ScrollBoxListViewMixin:UnassignAccessors(frame)
-    frame.GetElementData = nil;
-    frame.GetData = nil;
-    frame.ElementDataMatches = nil;
-    frame.GetOrderIndex = nil;
+    frame.GetElementData = nil
+    frame.GetData = nil
+    frame.ElementDataMatches = nil
+    frame.GetOrderIndex = nil
 end
 ```
 
@@ -1325,7 +1325,7 @@ end
 Data providers separate data from UI:
 
 ```lua
-DataProviderMixin = CreateFromMixins(CallbackRegistryMixin);
+DataProviderMixin = CreateFromMixins(CallbackRegistryMixin)
 
 DataProviderMixin:GenerateCallbackEvents({
     "OnSizeChanged",
@@ -1333,70 +1333,70 @@ DataProviderMixin:GenerateCallbackEvents({
     "OnRemove",
     "OnSort",
     "OnMove",
-});
+})
 
 function DataProviderMixin:Init(tbl)
-    CallbackRegistryMixin.OnLoad(self);
-    self.collection = {};
+    CallbackRegistryMixin.OnLoad(self)
+    self.collection = {}
 
     if tbl then
-        self:InsertTable(tbl);
+        self:InsertTable(tbl)
     end
 end
 
 function DataProviderMixin:Insert(...)
-    local count = select("#", ...);
+    local count = select("#", ...)
     for index = 1, count do
-        local value = select(index, ...);
-        self:InsertInternal(value);
+        local value = select(index, ...)
+        self:InsertInternal(value)
     end
 
     if count > 0 then
-        self:TriggerEvent(DataProviderMixin.Event.OnSizeChanged);
+        self:TriggerEvent(DataProviderMixin.Event.OnSizeChanged)
     end
 
-    self:Sort();
+    self:Sort()
 end
 
 function DataProviderMixin:Remove(...)
     -- Remove elements...
-    self:TriggerEvent(DataProviderMixin.Event.OnSizeChanged);
+    self:TriggerEvent(DataProviderMixin.Event.OnSizeChanged)
 end
 
 function DataProviderMixin:Enumerate(indexBegin, indexEnd)
-    return CreateTableEnumerator(self.collection, indexBegin, indexEnd);
+    return CreateTableEnumerator(self.collection, indexBegin, indexEnd)
 end
 
 function DataProviderMixin:SetSortComparator(sortComparator, skipSort)
-    self.sortComparator = sortComparator;
+    self.sortComparator = sortComparator
     if not skipSort then
-        self:Sort();
+        self:Sort()
     end
 end
 ```
 
 **Usage:**
 ```lua
-local dataProvider = CreateDataProvider();
+local dataProvider = CreateDataProvider()
 
 -- Listen for changes
 dataProvider:RegisterCallback(DataProviderMixin.Event.OnSizeChanged, function()
-    print("Data changed!");
-end);
+    print("Data changed!")
+end)
 
 -- Insert data
-dataProvider:Insert({name = "Item 1", value = 10});
-dataProvider:Insert({name = "Item 2", value = 5});
-dataProvider:Insert({name = "Item 3", value = 15});
+dataProvider:Insert({name = "Item 1", value = 10})
+dataProvider:Insert({name = "Item 2", value = 5})
+dataProvider:Insert({name = "Item 3", value = 15})
 
 -- Set sort
 dataProvider:SetSortComparator(function(a, b)
-    return a.value < b.value;
-end);
+    return a.value < b.value
+end)
 
 -- Enumerate
 for index, data in dataProvider:Enumerate() do
-    print(index, data.name, data.value);
+    print(index, data.name, data.value)
 end
 ```
 
@@ -1516,42 +1516,42 @@ MyAddonFrame.lua
 **MyAddonFrame.lua:**
 ```lua
 -- Item Button Mixin
-MyAddonItemButtonMixin = {};
+MyAddonItemButtonMixin = {}
 
 function MyAddonItemButtonMixin:OnLoad()
     -- Initialize button
 end
 
 function MyAddonItemButtonMixin:SetData(data)
-    self.data = data;
-    self.Icon:SetTexture(data.icon);
-    self.Name:SetText(data.name);
+    self.data = data
+    self.Icon:SetTexture(data.icon)
+    self.Name:SetText(data.name)
 end
 
 function MyAddonItemButtonMixin:OnClick()
-    print("Clicked:", self.data.name);
+    print("Clicked:", self.data.name)
 end
 
 function MyAddonItemButtonMixin:OnEnter()
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-    GameTooltip:SetText(self.data.name);
-    GameTooltip:AddLine(self.data.description, 1, 1, 1, true);
-    GameTooltip:Show();
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(self.data.name)
+    GameTooltip:AddLine(self.data.description, 1, 1, 1, true)
+    GameTooltip:Show()
 end
 
 function MyAddonItemButtonMixin:OnLeave()
-    GameTooltip:Hide();
+    GameTooltip:Hide()
 end
 
 -- Main Frame Mixin
-MyAddonFrameMixin = {};
+MyAddonFrameMixin = {}
 
 function MyAddonFrameMixin:OnLoad()
-    self:RegisterForDrag("LeftButton");
-    self.Title:SetText("My Addon");
+    self:RegisterForDrag("LeftButton")
+    self.Title:SetText("My Addon")
 
     -- Setup scroll frame
-    HybridScrollFrame_SetDoNotHideScrollBar(self.ScrollFrame, true);
+    HybridScrollFrame_SetDoNotHideScrollBar(self.ScrollFrame, true)
     HybridScrollFrame_CreateButtons(
         self.ScrollFrame,
         "MyAddonItemButtonTemplate",
@@ -1559,13 +1559,13 @@ function MyAddonFrameMixin:OnLoad()
         "TOPLEFT", "TOPLEFT",
         0, -1,
         "TOP", "BOTTOM"
-    );
+    )
 
-    self.data = {};
+    self.data = {}
 end
 
 function MyAddonFrameMixin:OnShow()
-    self:Refresh();
+    self:Refresh()
 end
 
 function MyAddonFrameMixin:OnHide()
@@ -1573,29 +1573,29 @@ function MyAddonFrameMixin:OnHide()
 end
 
 function MyAddonFrameMixin:SetData(data)
-    self.data = data;
-    self:Refresh();
+    self.data = data
+    self:Refresh()
 end
 
 function MyAddonFrameMixin:Refresh()
-    local scrollFrame = self.ScrollFrame;
-    local offset = HybridScrollFrame_GetOffset(scrollFrame);
-    local buttons = scrollFrame.buttons;
+    local scrollFrame = self.ScrollFrame
+    local offset = HybridScrollFrame_GetOffset(scrollFrame)
+    local buttons = scrollFrame.buttons
 
-    local itemHeight = 30;
-    local totalHeight = #self.data * itemHeight;
+    local itemHeight = 30
+    local totalHeight = #self.data * itemHeight
 
-    HybridScrollFrame_Update(scrollFrame, totalHeight, scrollFrame:GetHeight());
+    HybridScrollFrame_Update(scrollFrame, totalHeight, scrollFrame:GetHeight())
 
     for i = 1, #buttons do
-        local button = buttons[i];
-        local dataIndex = i + offset;
+        local button = buttons[i]
+        local dataIndex = i + offset
 
         if dataIndex <= #self.data then
-            button:SetData(self.data[dataIndex]);
-            button:Show();
+            button:SetData(self.data[dataIndex])
+            button:Show()
         else
-            button:Hide();
+            button:Hide()
         end
     end
 end
@@ -1606,10 +1606,10 @@ function MyAddon_ShowFrame()
         {name = "Item 1", icon = "Interface\\Icons\\INV_Misc_QuestionMark", description = "First item"},
         {name = "Item 2", icon = "Interface\\Icons\\INV_Misc_QuestionMark", description = "Second item"},
         {name = "Item 3", icon = "Interface\\Icons\\INV_Misc_QuestionMark", description = "Third item"},
-    };
+    }
 
-    MyAddonFrame:SetData(data);
-    MyAddonFrame:Show();
+    MyAddonFrame:SetData(data)
+    MyAddonFrame:Show()
 end
 ```
 
@@ -1641,7 +1641,7 @@ Separate art, code, and script binding for reusability:
 ### 3. Use Mixins for Composition
 ```lua
 -- Good: Compose behavior
-MyFrameMixin = CreateFromMixins(BaseFrameMixin, EventListenerMixin);
+MyFrameMixin = CreateFromMixins(BaseFrameMixin, EventListenerMixin)
 
 -- Avoid: Global functions
 function MyFrame_OnLoad(self)
@@ -1653,14 +1653,14 @@ end
 Only set scripts when needed:
 ```lua
 function MyMixin:MarkDirty()
-    self.dirty = true;
-    self:SetScript("OnUpdate", self.OnUpdate);  -- Set only when dirty
+    self.dirty = true
+    self:SetScript("OnUpdate", self.OnUpdate)  -- Set only when dirty
 end
 
 function MyMixin:OnUpdate()
     if self:IsDirty() then
-        self:Layout();
-        self:SetScript("OnUpdate", nil);  -- Remove when clean
+        self:Layout()
+        self:SetScript("OnUpdate", nil)  -- Remove when clean
     end
 end
 ```
@@ -1668,18 +1668,18 @@ end
 ### 5. Pool Frames for Performance
 ```lua
 -- Create pool
-local pool = CreateFramePool("Button", parent, "MyButtonTemplate");
+local pool = CreateFramePool("Button", parent, "MyButtonTemplate")
 
 -- Acquire from pool
-local button = pool:Acquire();
-button:SetText("Hello");
-button:Show();
+local button = pool:Acquire()
+button:SetText("Hello")
+button:Show()
 
 -- Release to pool
-pool:Release(button);
+pool:Release(button)
 
 -- Release all
-pool:ReleaseAll();
+pool:ReleaseAll()
 ```
 
 ### 6. Use Layout Frames
@@ -1699,9 +1699,9 @@ Let the system handle positioning:
 ### 7. Separate Data from UI
 Use data providers:
 ```lua
-local dataProvider = CreateDataProvider();
-dataProvider:Insert(item1, item2, item3);
-scrollBox:SetDataProvider(dataProvider);
+local dataProvider = CreateDataProvider()
+dataProvider:Insert(item1, item2, item3)
+scrollBox:SetDataProvider(dataProvider)
 ```
 
 ### 8. Layer Properly

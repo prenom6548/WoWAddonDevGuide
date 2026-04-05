@@ -122,36 +122,36 @@ You can declare multiple saved variables (comma-separated):
 -- No need to wait for ADDON_LOADED
 
 -- Directly access saved settings at file scope
-local debugMode = MyAddonDB and MyAddonDB.debugMode or false;
+local debugMode = MyAddonDB and MyAddonDB.debugMode or false
 
 if debugMode then
-    print("MyAddon: Debug mode enabled at load time!");
+    print("MyAddon: Debug mode enabled at load time!")
 end
 
 -- Initialize defaults if needed (still recommended)
-MyAddonDB = MyAddonDB or {};
-MyAddonDB.debugMode = MyAddonDB.debugMode or false;
+MyAddonDB = MyAddonDB or {}
+MyAddonDB.debugMode = MyAddonDB.debugMode or false
 ```
 
 **Comparison - Traditional vs LoadSavedVariablesFirst:**
 ```lua
 -- TRADITIONAL PATTERN (without LoadSavedVariablesFirst)
-local isDebug = false;  -- Must use default, variable not loaded yet
+local isDebug = false  -- Must use default, variable not loaded yet
 
-local frame = CreateFrame("Frame");
-frame:RegisterEvent("ADDON_LOADED");
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "MyAddon" then
-        MyAddonDB = MyAddonDB or {};
-        isDebug = MyAddonDB.debugMode;  -- NOW we can read it
-        self:UnregisterEvent("ADDON_LOADED");
+        MyAddonDB = MyAddonDB or {}
+        isDebug = MyAddonDB.debugMode  -- NOW we can read it
+        self:UnregisterEvent("ADDON_LOADED")
     end
-end);
+end)
 
 -- WITH LoadSavedVariablesFirst: 1
 -- SavedVariables already loaded, so this works immediately:
-MyAddonDB = MyAddonDB or {};
-local isDebug = MyAddonDB.debugMode or false;  -- Works at file scope!
+MyAddonDB = MyAddonDB or {}
+local isDebug = MyAddonDB.debugMode or false  -- Works at file scope!
 ```
 
 **Important Notes:**
@@ -169,10 +169,10 @@ local isDebug = MyAddonDB.debugMode or false;  -- Works at file scope!
 
 ```lua
 -- CORRECT: Global variable
-MyAddonDB = MyAddonDB or {};
+MyAddonDB = MyAddonDB or {}
 
 -- WRONG: Local variable (will not be saved!)
-local MyAddonDB = MyAddonDB or {};
+local MyAddonDB = MyAddonDB or {}
 ```
 
 ### Supported Data Types
@@ -201,7 +201,7 @@ MyAddonDB = {
         [1] = "array element",
         ["key"] = "hash element",
     },
-};
+}
 
 -- NOT serializable:
 -- Functions, metatables, userdata, coroutines
@@ -243,7 +243,7 @@ MyAddonDB = {
             showMinimap = true,
         },
     },
-};
+}
 ```
 
 ### Character Key Pattern
@@ -253,24 +253,24 @@ MyAddonDB = {
 ```lua
 -- Generate unique character key
 local function GetCharacterKey()
-    local name = UnitName("player");
-    local realm = GetRealmName();
-    return format("%s-%s", realm, name);
+    local name = UnitName("player")
+    local realm = GetRealmName()
+    return format("%s-%s", realm, name)
 end
 
 -- Initialize character data
 local function InitializeCharacterData()
-    local key = GetCharacterKey();
+    local key = GetCharacterKey()
 
     if not MyAddonDB.characters[key] then
         MyAddonDB.characters[key] = {
             created = time(),
             gold = 0,
             achievements = {},
-        };
+        }
     end
 
-    return MyAddonDB.characters[key];
+    return MyAddonDB.characters[key]
 end
 ```
 
@@ -297,7 +297,7 @@ MyAddonDB = {
     global = {
         -- Cross-character data
     },
-};
+}
 ```
 
 ---
@@ -310,15 +310,15 @@ MyAddonDB = {
 
 ```lua
 -- Initialize main DB
-MyAddonDB = MyAddonDB or {};
+MyAddonDB = MyAddonDB or {}
 
 -- Initialize with defaults
-MyAddonDB.version = MyAddonDB.version or 1;
-MyAddonDB.settings = MyAddonDB.settings or {};
+MyAddonDB.version = MyAddonDB.version or 1
+MyAddonDB.settings = MyAddonDB.settings or {}
 
 -- Don't overwrite existing data!
 if not MyAddonDB.characters then
-    MyAddonDB.characters = {};
+    MyAddonDB.characters = {}
 end
 ```
 
@@ -329,16 +329,16 @@ local function DeepMerge(target, source)
     for key, value in pairs(source) do
         if type(value) == "table" then
             if type(target[key]) ~= "table" then
-                target[key] = {};
+                target[key] = {}
             end
-            DeepMerge(target[key], value);
+            DeepMerge(target[key], value)
         else
             if target[key] == nil then
-                target[key] = value;
+                target[key] = value
             end
         end
     end
-    return target;
+    return target
 end
 
 -- Default structure
@@ -349,40 +349,40 @@ local defaults = {
         showTooltips = true,
     },
     characters = {},
-};
+}
 
 -- Merge defaults without overwriting existing data
-DeepMerge(MyAddonDB, defaults);
+DeepMerge(MyAddonDB, defaults)
 ```
 
 ### ADDON_LOADED Event Pattern
 
 ```lua
-local frame = CreateFrame("Frame");
-frame:RegisterEvent("ADDON_LOADED");
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "MyAddon" then
         -- Saved variables are now loaded
-        MyAddonDB = MyAddonDB or {};
+        MyAddonDB = MyAddonDB or {}
 
         -- Initialize defaults
         if not MyAddonDB.version then
             -- First time load
-            MyAddonDB.version = 1;
+            MyAddonDB.version = 1
             MyAddonDB.settings = {
                 enabled = true,
-            };
+            }
         end
 
         -- Perform any migrations
         if MyAddonDB.version < 2 then
-            MyAddon:MigrateToVersion2();
+            MyAddon:MigrateToVersion2()
         end
 
         -- Unregister - only need this once
-        self:UnregisterEvent("ADDON_LOADED");
+        self:UnregisterEvent("ADDON_LOADED")
     end
-end);
+end)
 ```
 
 ---
@@ -404,18 +404,18 @@ local DEFAULTS = {
         showMinimap = true,
         anchorPoint = "TOPRIGHT",
     },
-};
+}
 
 local function InitializeDatabase()
-    MyAddonDB = MyAddonDB or {};
+    MyAddonDB = MyAddonDB or {}
 
     -- Apply defaults for missing keys
     for key, value in pairs(DEFAULTS) do
         if MyAddonDB[key] == nil then
             if type(value) == "table" then
-                MyAddonDB[key] = CopyTable(value);
+                MyAddonDB[key] = CopyTable(value)
             else
-                MyAddonDB[key] = value;
+                MyAddonDB[key] = value
             end
         end
     end
@@ -425,36 +425,36 @@ end
 ### Version Migration Pattern
 
 ```lua
-local CURRENT_VERSION = 3;
+local CURRENT_VERSION = 3
 
 local function MigrateDatabase()
-    local db = MyAddonDB;
+    local db = MyAddonDB
 
     -- Version 1 -> 2
     if db.version < 2 then
         -- Rename old key
         if db.oldSettings then
-            db.settings = db.oldSettings;
-            db.oldSettings = nil;
+            db.settings = db.oldSettings
+            db.oldSettings = nil
         end
-        db.version = 2;
+        db.version = 2
     end
 
     -- Version 2 -> 3
     if db.version < 3 then
         -- Convert array to hash
         if db.itemList then
-            local items = {};
+            local items = {}
             for _, itemID in ipairs(db.itemList) do
-                items[itemID] = true;
+                items[itemID] = true
             end
-            db.items = items;
-            db.itemList = nil;
+            db.items = items
+            db.itemList = nil
         end
-        db.version = 3;
+        db.version = 3
     end
 
-    db.version = CURRENT_VERSION;
+    db.version = CURRENT_VERSION
 end
 ```
 
@@ -469,26 +469,26 @@ local function ResetToDefaults()
         button2 = "No",
         OnAccept = function()
             -- Wipe existing data
-            wipe(MyAddonDB);
+            wipe(MyAddonDB)
 
             -- Reinitialize with defaults
             for key, value in pairs(DEFAULTS) do
                 if type(value) == "table" then
-                    MyAddonDB[key] = CopyTable(value);
+                    MyAddonDB[key] = CopyTable(value)
                 else
-                    MyAddonDB[key] = value;
+                    MyAddonDB[key] = value
                 end
             end
 
             -- Reload UI
-            ReloadUI();
+            ReloadUI()
         end,
         timeout = 0,
         whileDead = true,
         hideOnEscape = true,
-    };
+    }
 
-    StaticPopup_Show("MYADDON_RESET_CONFIRM");
+    StaticPopup_Show("MYADDON_RESET_CONFIRM")
 end
 ```
 
@@ -508,14 +508,14 @@ local myData = {
         scale = 1.5,
     },
     items = {12345, 67890, 11111},
-};
+}
 
-local jsonStr = C_EncodingUtil.SerializeJSON(myData);
+local jsonStr = C_EncodingUtil.SerializeJSON(myData)
 -- Result: {"settings":{"enabled":true,"scale":1.5},"items":[12345,67890,11111]}
 
 -- Deserialize JSON back to table
-local restored = C_EncodingUtil.DeserializeJSON(jsonStr);
-print(restored.settings.enabled);  -- true
+local restored = C_EncodingUtil.DeserializeJSON(jsonStr)
+print(restored.settings.enabled)  -- true
 ```
 
 ### CBOR Serialization (Binary, Compact)
@@ -524,10 +524,10 @@ CBOR (Concise Binary Object Representation) is more compact than JSON and preser
 
 ```lua
 -- Serialize to CBOR (binary format)
-local cborStr = C_EncodingUtil.SerializeCBOR(myData);
+local cborStr = C_EncodingUtil.SerializeCBOR(myData)
 
 -- Deserialize CBOR back to table
-local restored = C_EncodingUtil.DeserializeCBOR(cborStr);
+local restored = C_EncodingUtil.DeserializeCBOR(cborStr)
 ```
 
 **When to use CBOR vs JSON:**
@@ -540,15 +540,15 @@ Compress large strings before storage or transmission:
 
 ```lua
 -- Compress a string
-local largeData = string.rep("Hello World! ", 1000);
-local compressed = C_EncodingUtil.CompressString(largeData);
+local largeData = string.rep("Hello World! ", 1000)
+local compressed = C_EncodingUtil.CompressString(largeData)
 
 -- Decompress back
-local original = C_EncodingUtil.DecompressString(compressed);
+local original = C_EncodingUtil.DecompressString(compressed)
 
 -- Check compression ratio
 print(format("Original: %d bytes, Compressed: %d bytes",
-    #largeData, #compressed));
+    #largeData, #compressed))
 ```
 
 ### Base64 Encoding (For Sharing)
@@ -557,16 +557,16 @@ Convert binary data to safe shareable strings:
 
 ```lua
 -- Encode for sharing (safe for chat/clipboard)
-local base64 = C_EncodingUtil.EncodeBase64(compressed);
+local base64 = C_EncodingUtil.EncodeBase64(compressed)
 
 -- Decode received string
-local decoded = C_EncodingUtil.DecodeBase64(base64);
+local decoded = C_EncodingUtil.DecodeBase64(base64)
 ```
 
 ### Complete Import/Export Pattern
 
 ```lua
-local MyAddon = {};
+local MyAddon = {}
 
 -- Export settings as shareable string
 function MyAddon:ExportSettings()
@@ -574,66 +574,66 @@ function MyAddon:ExportSettings()
         version = 1,
         settings = MyAddonDB.settings,
         timestamp = time(),
-    };
+    }
 
     -- Serialize to JSON
-    local json = C_EncodingUtil.SerializeJSON(exportData);
+    local json = C_EncodingUtil.SerializeJSON(exportData)
 
     -- Compress
-    local compressed = C_EncodingUtil.CompressString(json);
+    local compressed = C_EncodingUtil.CompressString(json)
 
     -- Base64 encode for safe sharing
-    local exportString = C_EncodingUtil.EncodeBase64(compressed);
+    local exportString = C_EncodingUtil.EncodeBase64(compressed)
 
-    return exportString;
+    return exportString
 end
 
 -- Import settings from shared string
 function MyAddon:ImportSettings(importString)
     -- Validate input
     if type(importString) ~= "string" or #importString == 0 then
-        return false, "Invalid import string";
+        return false, "Invalid import string"
     end
 
     -- Decode Base64
-    local decoded = C_EncodingUtil.DecodeBase64(importString);
+    local decoded = C_EncodingUtil.DecodeBase64(importString)
     if not decoded then
-        return false, "Failed to decode Base64";
+        return false, "Failed to decode Base64"
     end
 
     -- Decompress
-    local decompressed = C_EncodingUtil.DecompressString(decoded);
+    local decompressed = C_EncodingUtil.DecompressString(decoded)
     if not decompressed then
-        return false, "Failed to decompress data";
+        return false, "Failed to decompress data"
     end
 
     -- Parse JSON
-    local importData = C_EncodingUtil.DeserializeJSON(decompressed);
+    local importData = C_EncodingUtil.DeserializeJSON(decompressed)
     if not importData then
-        return false, "Failed to parse JSON";
+        return false, "Failed to parse JSON"
     end
 
     -- Validate version
     if not importData.version or importData.version > 1 then
-        return false, "Incompatible version";
+        return false, "Incompatible version"
     end
 
     -- Apply settings
     if importData.settings then
         for key, value in pairs(importData.settings) do
-            MyAddonDB.settings[key] = value;
+            MyAddonDB.settings[key] = value
         end
     end
 
-    return true, "Settings imported successfully!";
+    return true, "Settings imported successfully!"
 end
 
 -- Slash command handlers
-SLASH_MYADDON_EXPORT1 = "/myaddonexport";
+SLASH_MYADDON_EXPORT1 = "/myaddonexport"
 SlashCmdList["MYADDON_EXPORT"] = function()
-    local exportStr = MyAddon:ExportSettings();
+    local exportStr = MyAddon:ExportSettings()
     -- Copy to editbox for user to copy
-    MyAddon:ShowExportDialog(exportStr);
+    MyAddon:ShowExportDialog(exportStr)
 end
 ```
 
@@ -644,19 +644,19 @@ For addons with large datasets, compress before saving:
 ```lua
 -- Store compressed data in SavedVariables
 function MyAddon:SaveLargeData(data)
-    local json = C_EncodingUtil.SerializeJSON(data);
-    MyAddonDB.compressedData = C_EncodingUtil.CompressString(json);
-    MyAddonDB.dataVersion = 1;
+    local json = C_EncodingUtil.SerializeJSON(data)
+    MyAddonDB.compressedData = C_EncodingUtil.CompressString(json)
+    MyAddonDB.dataVersion = 1
 end
 
 -- Load and decompress
 function MyAddon:LoadLargeData()
     if not MyAddonDB.compressedData then
-        return nil;
+        return nil
     end
 
-    local json = C_EncodingUtil.DecompressString(MyAddonDB.compressedData);
-    return C_EncodingUtil.DeserializeJSON(json);
+    local json = C_EncodingUtil.DecompressString(MyAddonDB.compressedData)
+    return C_EncodingUtil.DeserializeJSON(json)
 end
 ```
 
@@ -679,45 +679,45 @@ end
 **Step 2: Create public API in your namespace**
 ```lua
 -- MyDataAddon/Core.lua
-local addonName, ns = ...;
+local addonName, ns = ...
 
 -- Private data (not directly accessible)
 ns.privateData = {
     internalCache = {},
-};
+}
 
 -- Public API (accessible by other addons)
 ns.API = {
     -- Get addon version
     GetVersion = function()
-        return "1.0.0";
+        return "1.0.0"
     end,
 
     -- Get player's tracked data
     GetPlayerData = function(playerName)
         if not MyDataAddonDB.players then
-            return nil;
+            return nil
         end
-        return CopyTable(MyDataAddonDB.players[playerName] or {});
+        return CopyTable(MyDataAddonDB.players[playerName] or {})
     end,
 
     -- Check if tracking is enabled
     IsTrackingEnabled = function()
-        return MyDataAddonDB.settings and MyDataAddonDB.settings.trackingEnabled;
+        return MyDataAddonDB.settings and MyDataAddonDB.settings.trackingEnabled
     end,
 
     -- Register callback for data updates
     RegisterCallback = function(callback)
-        ns.callbacks = ns.callbacks or {};
-        table.insert(ns.callbacks, callback);
+        ns.callbacks = ns.callbacks or {}
+        table.insert(ns.callbacks, callback)
     end,
-};
+}
 
 -- Internal function to notify callbacks
 function ns:NotifyCallbacks(event, data)
     if self.callbacks then
         for _, callback in ipairs(self.callbacks) do
-            pcall(callback, event, data);
+            pcall(callback, event, data)
         end
     end
 end
@@ -727,42 +727,42 @@ end
 
 ```lua
 -- OtherAddon/Core.lua
-local addonName, ns = ...;
+local addonName, ns = ...
 
 local function OnAddonLoaded()
     -- Try to get MyDataAddon's namespace
-    local dataAddonNS = C_AddOns.GetAddOnLocalTable("MyDataAddon");
+    local dataAddonNS = C_AddOns.GetAddOnLocalTable("MyDataAddon")
 
     if dataAddonNS and dataAddonNS.API then
         -- Access the API
-        local version = dataAddonNS.API.GetVersion();
-        print("MyDataAddon version:", version);
+        local version = dataAddonNS.API.GetVersion()
+        print("MyDataAddon version:", version)
 
         -- Get player data
-        local playerData = dataAddonNS.API.GetPlayerData(UnitName("player"));
+        local playerData = dataAddonNS.API.GetPlayerData(UnitName("player"))
         if playerData then
-            print("Found player data!");
+            print("Found player data!")
         end
 
         -- Register for updates
         dataAddonNS.API.RegisterCallback(function(event, data)
-            print("Data update:", event);
-        end);
+            print("Data update:", event)
+        end)
     else
-        print("MyDataAddon not available or API not exposed");
+        print("MyDataAddon not available or API not exposed")
     end
 end
 
 -- Wait for both addons to load
-local frame = CreateFrame("Frame");
-frame:RegisterEvent("ADDON_LOADED");
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(self, event, loadedAddon)
     if loadedAddon == addonName then
         -- Use a slight delay to ensure other addons are ready
-        C_Timer.After(0, OnAddonLoaded);
-        self:UnregisterEvent("ADDON_LOADED");
+        C_Timer.After(0, OnAddonLoaded)
+        self:UnregisterEvent("ADDON_LOADED")
     end
-end);
+end)
 ```
 
 ### Best Practices for Cross-Addon Communication
@@ -771,37 +771,37 @@ end);
 -- GOOD: Return copies of data, not references
 ns.API = {
     GetSettings = function()
-        return CopyTable(ns.db.settings);  -- Safe copy
+        return CopyTable(ns.db.settings)  -- Safe copy
     end,
-};
+}
 
 -- BAD: Returning direct references (allows modification)
 ns.API = {
     GetSettings = function()
-        return ns.db.settings;  -- Direct reference - dangerous!
+        return ns.db.settings  -- Direct reference - dangerous!
     end,
-};
+}
 
 -- GOOD: Validate inputs
 ns.API = {
     SetOption = function(key, value)
-        local validKeys = {debugMode = true, showTooltips = true};
+        local validKeys = {debugMode = true, showTooltips = true}
         if not validKeys[key] then
-            return false, "Invalid option key";
+            return false, "Invalid option key"
         end
-        ns.db.settings[key] = value;
-        return true;
+        ns.db.settings[key] = value
+        return true
     end,
-};
+}
 
 -- GOOD: Version your API
 ns.API = {
     API_VERSION = 1,
 
     IsCompatible = function(requiredVersion)
-        return ns.API.API_VERSION >= requiredVersion;
+        return ns.API.API_VERSION >= requiredVersion
     end,
-};
+}
 ```
 
 ### Checking Addon Availability
@@ -811,25 +811,25 @@ ns.API = {
 local function IsAddonAPIAvailable(addonName)
     -- Check if addon is loaded
     if not C_AddOns.IsAddOnLoaded(addonName) then
-        return false, "Addon not loaded";
+        return false, "Addon not loaded"
     end
 
     -- Try to get the table
-    local addonNS = C_AddOns.GetAddOnLocalTable(addonName);
+    local addonNS = C_AddOns.GetAddOnLocalTable(addonName)
     if not addonNS then
-        return false, "API access not enabled (AllowAddOnTableAccess)";
+        return false, "API access not enabled (AllowAddOnTableAccess)"
     end
 
-    return true, addonNS;
+    return true, addonNS
 end
 
 -- Usage
-local available, result = IsAddonAPIAvailable("MyDataAddon");
+local available, result = IsAddonAPIAvailable("MyDataAddon")
 if available then
-    local ns = result;
+    local ns = result
     -- Use ns.API...
 else
-    print("Cannot access addon:", result);
+    print("Cannot access addon:", result)
 end
 ```
 
@@ -847,7 +847,7 @@ for i = 1, 1000000 do
     MyAddonDB.hugeArray[i] = {
         lots = "of",
         data = "here",
-    };
+    }
 end
 
 -- GOOD: Store only essential data
@@ -855,7 +855,7 @@ MyAddonDB.statistics = {
     totalKills = 1000000,
     averageDamage = 50000,
     -- Aggregate, don't store every event
-};
+}
 ```
 
 ### Data Pruning
@@ -863,11 +863,11 @@ MyAddonDB.statistics = {
 ```lua
 -- Remove old character data
 local function PruneOldCharacters()
-    local cutoff = time() - (30 * 24 * 60 * 60);  -- 30 days
+    local cutoff = time() - (30 * 24 * 60 * 60)  -- 30 days
 
     for key, data in pairs(MyAddonDB.characters) do
         if data.lastSeen and data.lastSeen < cutoff then
-            MyAddonDB.characters[key] = nil;
+            MyAddonDB.characters[key] = nil
         end
     end
 end
@@ -877,30 +877,30 @@ end
 
 ```lua
 -- Don't load all data at once
-MyAddonDB.cache = MyAddonDB.cache or {};
+MyAddonDB.cache = MyAddonDB.cache or {}
 
 local function GetCachedData(key)
     if MyAddonDB.cache[key] then
-        return MyAddonDB.cache[key];
+        return MyAddonDB.cache[key]
     end
 
     -- Load/compute data
-    local data = ExpensiveOperation(key);
+    local data = ExpensiveOperation(key)
 
     -- Cache it
-    MyAddonDB.cache[key] = data;
+    MyAddonDB.cache[key] = data
 
-    return data;
+    return data
 end
 
 -- Clear cache on logout
-frame:RegisterEvent("PLAYER_LOGOUT");
+frame:RegisterEvent("PLAYER_LOGOUT")
 frame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_LOGOUT" then
         -- Don't save cache
-        MyAddonDB.cache = {};
+        MyAddonDB.cache = {}
     end
-end);
+end)
 ```
 
 ---
@@ -913,29 +913,29 @@ end);
 
 ```lua
 local function ValidateDatabase()
-    local db = MyAddonDB;
+    local db = MyAddonDB
 
     -- Check version is a number
     if type(db.version) ~= "number" then
-        print("MyAddon: Invalid database version, resetting...");
-        MyAddonDB = {};
-        return false;
+        print("MyAddon: Invalid database version, resetting...")
+        MyAddonDB = {}
+        return false
     end
 
     -- Check settings is a table
     if type(db.settings) ~= "table" then
-        print("MyAddon: Invalid settings, resetting...");
-        db.settings = {};
+        print("MyAddon: Invalid settings, resetting...")
+        db.settings = {}
     end
 
     -- Validate setting values
     if type(db.settings.uiScale) ~= "number" or
        db.settings.uiScale < 0.5 or
        db.settings.uiScale > 2.0 then
-        db.settings.uiScale = 1.0;
+        db.settings.uiScale = 1.0
     end
 
-    return true;
+    return true
 end
 ```
 
@@ -948,26 +948,26 @@ local function SetOption(key, value)
         debugMode = "boolean",
         uiScale = "number",
         playerName = "string",
-    };
+    }
 
     if not allowedKeys[key] then
-        error("Invalid option key: " .. tostring(key));
-        return;
+        error("Invalid option key: " .. tostring(key))
+        return
     end
 
     -- Type check
     if type(value) ~= allowedKeys[key] then
         error(format("Option '%s' must be %s, got %s",
-            key, allowedKeys[key], type(value)));
-        return;
+            key, allowedKeys[key], type(value)))
+        return
     end
 
     -- Additional validation
     if key == "uiScale" then
-        value = Clamp(value, 0.5, 2.0);
+        value = Clamp(value, 0.5, 2.0)
     end
 
-    MyAddonDB.settings[key] = value;
+    MyAddonDB.settings[key] = value
 end
 ```
 
@@ -1020,22 +1020,22 @@ MyAddonDB = {
 ```lua
 local function DebugPrint(...)
     if MyAddonDB.settings.debugMode then
-        print("|cff00ff00[MyAddon]|r", ...);
+        print("|cff00ff00[MyAddon]|r", ...)
     end
 end
 
 local function DumpDatabase()
     if not MyAddonDB.settings.debugMode then
-        return;
+        return
     end
 
-    print("=== MyAddon Database ===");
-    print("Version:", MyAddonDB.version);
-    print("Characters:", count(MyAddonDB.characters));
+    print("=== MyAddon Database ===")
+    print("Version:", MyAddonDB.version)
+    print("Characters:", count(MyAddonDB.characters))
 
     for key, data in pairs(MyAddonDB.characters) do
         print(format("  %s: Level %d, Gold %d",
-            key, data.level or 0, data.gold or 0));
+            key, data.level or 0, data.gold or 0))
     end
 end
 ```
@@ -1086,54 +1086,54 @@ local DEFAULTS = {
         trackAll = false,
     },
     characters = {},
-};
+}
 
 -- Initialize
-local frame = CreateFrame("Frame");
-frame:RegisterEvent("ADDON_LOADED");
-frame:RegisterEvent("PLAYER_LOGOUT");
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("PLAYER_LOGOUT")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
-        local addonName = ...;
+        local addonName = ...
         if addonName == "MyAddon" then
             -- Initialize saved variables
-            MyTrackerDB = MyTrackerDB or {};
-            MyTrackerCharDB = MyTrackerCharDB or {};
+            MyTrackerDB = MyTrackerDB or {}
+            MyTrackerCharDB = MyTrackerCharDB or {}
 
             -- Apply defaults
             for key, value in pairs(DEFAULTS) do
                 if MyTrackerDB[key] == nil then
                     if type(value) == "table" then
-                        MyTrackerDB[key] = CopyTable(value);
+                        MyTrackerDB[key] = CopyTable(value)
                     else
-                        MyTrackerDB[key] = value;
+                        MyTrackerDB[key] = value
                     end
                 end
             end
 
             -- Initialize character data
-            local charKey = format("%s-%s", GetRealmName(), UnitName("player"));
+            local charKey = format("%s-%s", GetRealmName(), UnitName("player"))
             if not MyTrackerDB.characters[charKey] then
                 MyTrackerDB.characters[charKey] = {
                     created = time(),
-                };
+                }
             end
 
             -- Also init per-char DB
-            MyTrackerCharDB.items = MyTrackerCharDB.items or {};
+            MyTrackerCharDB.items = MyTrackerCharDB.items or {}
 
-            print("MyAddon loaded with version", MyTrackerDB.version);
+            print("MyAddon loaded with version", MyTrackerDB.version)
         end
 
     elseif event == "PLAYER_LOGOUT" then
         -- Clean up before save
-        local charKey = format("%s-%s", GetRealmName(), UnitName("player"));
+        local charKey = format("%s-%s", GetRealmName(), UnitName("player"))
         if MyTrackerDB.characters[charKey] then
-            MyTrackerDB.characters[charKey].lastSeen = time();
+            MyTrackerDB.characters[charKey].lastSeen = time()
         end
     end
-end);
+end)
 ```
 
 ---
@@ -1149,21 +1149,21 @@ When tracking data across characters, consider using Warband-aware identifiers:
 ```lua
 -- Traditional character key
 local function GetCharacterKey()
-    local name = UnitName("player");
-    local realm = GetRealmName();
-    return format("%s-%s", realm, name);
+    local name = UnitName("player")
+    local realm = GetRealmName()
+    return format("%s-%s", realm, name)
 end
 
 -- Warband-aware character GUID (more stable)
 local function GetWarbandCharacterID()
     -- Player GUID is stable across sessions
-    local guid = UnitGUID("player");
-    return guid;
+    local guid = UnitGUID("player")
+    return guid
 end
 
 -- Get all Warband characters for current account
 local function GetWarbandCharacters()
-    local characters = {};
+    local characters = {}
 
     -- Use C_AccountInfo for warband character data
     if C_AccountInfo and C_AccountInfo.GetIDFromBattleNetAccountGUID then
@@ -1171,7 +1171,7 @@ local function GetWarbandCharacters()
         -- Note: API availability may vary by patch
     end
 
-    return characters;
+    return characters
 end
 ```
 
@@ -1207,7 +1207,7 @@ MyAddonDB = {
             lastSeen = time(),
         },
     },
-};
+}
 
 -- Per-character data that should NOT be shared
 MyCharDB = {
@@ -1219,7 +1219,7 @@ MyCharDB = {
 
     -- Session-specific cache
     sessionCache = {},
-};
+}
 ```
 
 ### Bank Storage Changes (11.2.0+)
@@ -1242,11 +1242,11 @@ MyCharDB = {
 -- Check if bank is available
 if C_Bank then
     -- Get bank bag slots
-    local bagSlots = C_Container.GetNumBankSlots();
+    local bagSlots = C_Container.GetNumBankSlots()
 
     -- Warband bank tab information
     if C_Bank.FetchPurchasedBankTabData then
-        C_Bank.FetchPurchasedBankTabData(Enum.BankType.Account);
+        C_Bank.FetchPurchasedBankTabData(Enum.BankType.Account)
     end
 end
 ```
@@ -1257,7 +1257,7 @@ If your addon previously tracked Void Storage:
 
 ```lua
 local function MigrateFromVoidStorage()
-    local db = MyAddonDB;
+    local db = MyAddonDB
 
     -- Version check for migration
     if db.version and db.version < 12 then
@@ -1265,13 +1265,13 @@ local function MigrateFromVoidStorage()
         if db.voidStorage then
             -- Optionally migrate to regular bank tracking
             -- or just remove the obsolete data
-            db.voidStorageLegacy = db.voidStorage;  -- Keep for reference
-            db.voidStorage = nil;
+            db.voidStorageLegacy = db.voidStorage  -- Keep for reference
+            db.voidStorage = nil
 
-            print("MyAddon: Void Storage tracking removed (feature no longer exists)");
+            print("MyAddon: Void Storage tracking removed (feature no longer exists)")
         end
 
-        db.version = 12;
+        db.version = 12
     end
 end
 ```
@@ -1281,20 +1281,20 @@ end
 ```lua
 -- Track items across Warband bank
 local function GetWarbandBankItems()
-    local items = {};
+    local items = {}
 
     -- Warband bank uses account-wide bank type
     if C_Bank and Enum.BankType.Account then
         -- Iterate warband bank tabs
-        local numTabs = C_Bank.FetchNumPurchasedBankTabs(Enum.BankType.Account) or 0;
+        local numTabs = C_Bank.FetchNumPurchasedBankTabs(Enum.BankType.Account) or 0
 
         for tabIndex = 1, numTabs do
-            local tabInfo = C_Bank.FetchPurchasedBankTabData(Enum.BankType.Account);
+            local tabInfo = C_Bank.FetchPurchasedBankTabData(Enum.BankType.Account)
             -- Process tab data...
         end
     end
 
-    return items;
+    return items
 end
 ```
 
@@ -1302,44 +1302,44 @@ end
 
 ```lua
 -- 1. Use GUIDs instead of name-realm for character identification
-local charGUID = UnitGUID("player");
+local charGUID = UnitGUID("player")
 MyAddonDB.characters[charGUID] = {
     name = UnitName("player"),
     realm = GetRealmName(),
     -- ... other data
-};
+}
 
 -- 2. Aggregate data at logout for cross-character visibility
-frame:RegisterEvent("PLAYER_LOGOUT");
+frame:RegisterEvent("PLAYER_LOGOUT")
 frame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_LOGOUT" then
-        local charGUID = UnitGUID("player");
-        local charData = MyAddonDB.characters[charGUID] or {};
+        local charGUID = UnitGUID("player")
+        local charData = MyAddonDB.characters[charGUID] or {}
 
         -- Update character's contribution to warband totals
-        charData.gold = GetMoney();
-        charData.lastSeen = time();
+        charData.gold = GetMoney()
+        charData.lastSeen = time()
 
-        MyAddonDB.characters[charGUID] = charData;
+        MyAddonDB.characters[charGUID] = charData
 
         -- Recalculate warband totals
-        local totalGold = 0;
+        local totalGold = 0
         for _, char in pairs(MyAddonDB.characters) do
-            totalGold = totalGold + (char.gold or 0);
+            totalGold = totalGold + (char.gold or 0)
         end
-        MyAddonDB.warbandData.totalGold = totalGold;
+        MyAddonDB.warbandData.totalGold = totalGold
     end
-end);
+end)
 
 -- 3. Handle character deletion gracefully
 local function PruneDeletedCharacters()
     -- Characters not seen in 90+ days might be deleted
-    local cutoff = time() - (90 * 24 * 60 * 60);
+    local cutoff = time() - (90 * 24 * 60 * 60)
 
     for guid, data in pairs(MyAddonDB.characters) do
         if data.lastSeen and data.lastSeen < cutoff then
             -- Mark as possibly deleted, don't remove immediately
-            data.possiblyDeleted = true;
+            data.possiblyDeleted = true
         end
     end
 end
