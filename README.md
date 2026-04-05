@@ -349,9 +349,17 @@ All examples in this knowledge base reference:
 - `## LoadSavedVariablesFirst:` - Ensure saved variables load before code
 
 ### External Links
-- **Wowpedia**: https://wowpedia.fandom.com/wiki/World_of_Warcraft_API
-- **WoW AddOn Discord**: Community support
-- **CurseForge**: Download popular addons for study
-- **Wago.io**: Addon hosting and sharing
+
+**Documentation & Reference:**
+- [warcraft.wiki.gg](https://warcraft.wiki.gg/) — current community wiki (active since the 2023 Fandom migration). Covers API, events, widget methods, and patch changes.
+- [Gethe/wow-ui-source (GitHub)](https://github.com/Gethe/wow-ui-source) — community mirror of Blizzard's UI source code. Branches track each client: `live` for retail, `ptr`/`ptr2`/`beta` for unreleased builds.
+
+**Community:**
+- [WoWUIDev Discord](https://discord.com/invite/txUg39Vhc6) — addon development community; home of WowAce and WowInterface contributors.
+- [WoWInterface](https://www.wowinterface.com/) — addon hosting and long-standing author forums.
+
+**Addon Hosting:**
+- [CurseForge](https://www.curseforge.com/wow/addons) — largest addon distribution platform; useful for downloading popular addons to study real-world patterns.
+- [Wago.io](https://addons.wago.io/) — addon/WeakAuras hosting.
 
 <!-- CLAUDE_SKIP_END -->
