@@ -136,10 +136,13 @@ statusBar:SetStatusBarColorCurve(colorCurve)
 
 ```lua
 local function UpdateCooldownDisplay(cooldownFrame, spellID)
-    local start, duration, enabled = GetSpellCooldown(spellID)
+    -- Global GetSpellCooldown was removed in 11.0.0; use C_Spell.GetSpellCooldown,
+    -- which returns a single SpellCooldownInfo table (or nil if spell not found).
+    local cooldownInfo = C_Spell.GetSpellCooldown(spellID)
+    if not cooldownInfo then return end
 
     -- Check if values are secret
-    if issecretvalue(start) or issecretvalue(duration) then
+    if issecretvalue(cooldownInfo.startTime) or issecretvalue(cooldownInfo.duration) then
         -- Use Duration object for secret-safe display
         local durationObj = C_DurationUtil.CreateDuration()
         cooldownFrame:SetCooldownFromDurationObject(durationObj)
@@ -148,8 +151,8 @@ local function UpdateCooldownDisplay(cooldownFrame, spellID)
         cooldownFrame.protectedIcon:Show()
     else
         -- Normal path when secrets not active
-        if enabled and duration > 0 then
-            cooldownFrame:SetCooldown(start, duration)
+        if cooldownInfo.isEnabled and cooldownInfo.duration > 0 then
+            cooldownFrame:SetCooldown(cooldownInfo.startTime, cooldownInfo.duration)
         else
             cooldownFrame:Clear()
         end
