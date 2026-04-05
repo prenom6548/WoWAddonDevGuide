@@ -183,7 +183,7 @@ end
 - `MixinName` - The mixin table (e.g., `MyAddonFrameMixin`)
 - `MixinName:OnLoad()` - Initialization method
 - `MixinName:OnShow()` - Show handler
-- `MixinName_Intrinsic` - Framework internals (rare, Blizzard only)
+- `_Intrinsic` suffix on script-handler method names (e.g. `MyMixin:OnLoad_Intrinsic`, `MyMixin:OnMouseDown_Intrinsic`) - framework-internal handlers invoked by the XML intrinsic system. Used by Blizzard mixins like `DropdownButtonMixin`, `EventButtonMixin`, `EventEditBoxMixin`. Addon code normally defines the plain `OnLoad`/`OnShow` etc. and does not need the `_Intrinsic` variant.
 - All mixin methods use PascalCase in Blizzard source (no lowercase "private" method convention). For true privacy, use file-local functions rather than mixin methods.
 
 ---
