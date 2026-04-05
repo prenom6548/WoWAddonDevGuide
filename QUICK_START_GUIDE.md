@@ -16,7 +16,7 @@
 ## Welcome!
 <!-- CLAUDE_SKIP_START -->
 
-This knowledge base contains everything you need to create, debug, and maintain World of Warcraft addons. Updated for **WoW 12.0.0 (Midnight)** with Interface version **120001**.
+This knowledge base contains everything you need to create, debug, and maintain World of Warcraft addons. Updated for **WoW 12.0.1 (Midnight)** with Interface version **120001**.
 <!-- CLAUDE_SKIP_END -->
 
 ## Critical 12.0.0 Changes
@@ -36,12 +36,14 @@ Combat-sensitive data is now hidden from addons:
 - See [12_API_Migration_Guide.md](12_API_Migration_Guide.md) for comprehensive migration patterns
 
 ### API Migrations
-Many global functions have been removed. Use C_* namespaces:
+Many global functions have been deprecated in favor of `C_*` namespaces. The globals typically survive as deprecation shims gated by the `loadDeprecationFallbacks` CVar (disabled by default), so prefer the namespaced form:
 
-| Old (Removed) | New (12.0.0) |
-|---------------|--------------|
+| Old (Deprecated) | New (C_* namespace) |
+|------------------|--------------------|
 | `GetActionTexture()` | `C_ActionBar.GetActionTexture()` |
 | `CombatLogGetCurrentEventInfo()` | `C_CombatLog.GetCurrentEventInfo()` |
+
+See [12_API_Migration_Guide.md](12_API_Migration_Guide.md) for the full migration reference.
 
 ### New TOC Directives
 ```
@@ -109,10 +111,10 @@ Many global functions have been removed. Use C_* namespaces:
 10. **[09_Addon_Libraries_Guide.md](09_Addon_Libraries_Guide.md)** - Library reference (LibStub, LibDataBroker, LibSharedMedia)
 11. **[09a_Ace3_Library_Guide.md](09a_Ace3_Library_Guide.md)** - Comprehensive Ace3 framework reference
 12. **[10_Advanced_Techniques.md](10_Advanced_Techniques.md)** - Production-level patterns
-12. **[11_Housing_System_Guide.md](11_Housing_System_Guide.md)** - Housing system APIs and development
-13. **[12_API_Migration_Guide.md](12_API_Migration_Guide.md)** - API version migration and compatibility
-14. **[12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md)** - Complete 12.0+ secret values API reference
-15. **[13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md)** - Cooldown Viewer system: C_CooldownViewer API, alerts, layout, CooldownFrame widget (NEW)
+13. **[11_Housing_System_Guide.md](11_Housing_System_Guide.md)** - Housing system APIs and development
+14. **[12_API_Migration_Guide.md](12_API_Migration_Guide.md)** - API version migration and compatibility
+15. **[12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md)** - Complete 12.0+ secret values API reference
+16. **[13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md)** - Cooldown Viewer system: C_CooldownViewer API, alerts, layout, CooldownFrame widget
 
 <!-- CLAUDE_SKIP_END -->
 ## Your First Addon - 5 Minute Tutorial
@@ -125,7 +127,7 @@ Many global functions have been removed. Use C_* namespaces:
 ### Step 2: Create TOC File
 **MyFirstAddon.toc:**
 ```
-## Interface: 120000
+## Interface: 120001
 ## Title: My First Addon
 ## Author: Your Name
 ## Version: 1.0.0
@@ -137,7 +139,7 @@ MyFirstAddon.lua
 
 **Note:** Since Patch 10.1.0, you can support multiple WoW versions with comma-separated Interface values:
 ```
-## Interface: 120000, 110207, 40402, 11508
+## Interface: 120001, 110207, 40402, 11508
 ```
 This means one TOC file works for Retail, Classic, and everything in between (if your code is compatible). See [04_Addon_Structure.md](04_Addon_Structure.md) for details.
 
@@ -145,28 +147,28 @@ This means one TOC file works for Retail, Classic, and everything in between (if
 **MyFirstAddon.lua:**
 ```lua
 -- Initialize saved variable
-MyFirstAddonDB = MyFirstAddonDB or {};
+MyFirstAddonDB = MyFirstAddonDB or {}
 
 -- Create event frame
-local frame = CreateFrame("Frame");
-frame:RegisterEvent("PLAYER_LOGIN");
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_LOGIN")
 
 -- Event handler
 frame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_LOGIN" then
-        print("My First Addon loaded!");
+        print("My First Addon loaded!")
 
         -- Save player name
-        MyFirstAddonDB.playerName = UnitName("player");
-        print("Hello,", MyFirstAddonDB.playerName);
+        MyFirstAddonDB.playerName = UnitName("player")
+        print("Hello,", MyFirstAddonDB.playerName)
     end
-end);
+end)
 
 -- Slash command
-SLASH_MYFIRSTADDON1 = "/mfa";
+SLASH_MYFIRSTADDON1 = "/mfa"
 SlashCmdList["MYFIRSTADDON"] = function(msg)
-    print("My First Addon - You typed:", msg);
-end;
+    print("My First Addon - You typed:", msg)
+end
 ```
 
 ### Step 4: Test
@@ -192,7 +194,7 @@ Now that you have a working addon, learn more:
 
 ```lua
 -- Print to chat
-print("Debug:", value);
+print("Debug:", value)
 
 -- Dump table
 /dump MyTable
@@ -214,72 +216,73 @@ print("Debug:", value);
 ## SavedVariables: MyAddonDB
 
 -- Use in code
-MyAddonDB = MyAddonDB or {};
-MyAddonDB.setting = true;
+MyAddonDB = MyAddonDB or {}
+MyAddonDB.setting = true
 
 -- Load event
-frame:RegisterEvent("ADDON_LOADED");
+frame:RegisterEvent("ADDON_LOADED")
 ```
 
 ### Events
 
 ```lua
 -- Register event
-frame:RegisterEvent("PLAYER_LOGIN");
+frame:RegisterEvent("PLAYER_LOGIN")
 
 -- Handle event
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         -- Your code
     end
-end);
+end)
 ```
 
 ### API Calls
 
 ```lua
 -- Unit info
-local name = UnitName("player");
-local health = UnitHealth("player");
+local name = UnitName("player")
+local health = UnitHealth("player")  -- returns secret values during combat (12.0.0+)
 
 -- Item info (use C_Item in 12.0.0)
-local itemInfo = C_Item.GetItemInfo(itemID);
+local itemInfo = C_Item.GetItemInfo(itemID)
 
 -- Spell info (use C_Spell in 12.0.0)
-local spellInfo = C_Spell.GetSpellInfo(spellID);
+local spellInfo = C_Spell.GetSpellInfo(spellID)
 
 -- Quest info
-local quests = C_QuestLog.GetAllCompletedQuestIDs();
+local quests = C_QuestLog.GetAllCompletedQuestIDs()
 
 -- Action bar (12.0.0 - use C_ActionBar)
-local texture = C_ActionBar.GetActionTexture(slot);
-local hasAction = C_ActionBar.HasAction(slot);
+local texture = C_ActionBar.GetActionTexture(slot)
+local hasAction = C_ActionBar.HasAction(slot)
 
--- Damage meter (12.0.0) - WARNING: Data is SECRET-PROTECTED!
--- Third-party addons CANNOT use this API - data values are hidden
--- local encounterData = C_DamageMeter.GetEncounterData(); -- Returns secret values!
+-- Damage meter (12.0.0) - data is SECRET-PROTECTED during combat.
+-- Workarounds exist (pcall(string.format,...), StatusBar:SetValue, array
+-- index for sort order, post-combat re-parse). See 12a_Secret_Safe_APIs.md.
+-- local encounterData = C_DamageMeter.GetEncounterData()
 ```
 
 ### UI Frames
 
 ```lua
 -- Create frame
-local frame = CreateFrame("Frame", "MyFrame", UIParent);
-frame:SetSize(200, 100);
-frame:SetPoint("CENTER");
+local frame = CreateFrame("Frame", "MyFrame", UIParent)
+frame:SetSize(200, 100)
+frame:SetPoint("CENTER")
 
 -- Add texture background
-local bg = frame:CreateTexture(nil, "BACKGROUND");
-bg:SetAllPoints();
-bg:SetColorTexture(0, 0, 0, 0.8);
+local bg = frame:CreateTexture(nil, "BACKGROUND")
+bg:SetAllPoints()
+bg:SetColorTexture(0, 0, 0, 0.8)
 
 -- Add text
-local text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal");
-text:SetPoint("CENTER");
-text:SetText("Hello, World!");
+local text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+text:SetPoint("CENTER")
+text:SetText("Hello, World!")
 
 -- Show frame
-frame:Show();
+frame:Show()
 ```
 
 ## Getting Help
@@ -294,16 +297,17 @@ frame:Show();
 - `/console scriptErrors 1` - Enable Lua error display
 
 ### Useful Addons for Development
-- **BugSack** - Lua error capture
-- **BugGrabber** - Error handler
+Community debugging tools — check CurseForge/Wago for current versions:
+- **BugSack** / **BugGrabber** - Lua error capture and display
 - **DevTool** - Variable inspector
 - **Blizzard_DebugTools** - Built-in debug tools (`/dump`, `/run`)
 
 ### External Resources
-- **Wowpedia** - https://wowpedia.fandom.com/wiki/World_of_Warcraft_API
-- **WoW AddOn Discord** - Community support
-- **GitHub** - Search for addon examples
-- **CurseForge/Wago** - Download and study popular addons
+- [warcraft.wiki.gg](https://warcraft.wiki.gg/) — current community wiki (active since the 2023 Fandom migration)
+- [Gethe/wow-ui-source (GitHub)](https://github.com/Gethe/wow-ui-source) — online mirror of Blizzard's UI source code, branches track each client
+- [WoWUIDev Discord](https://discord.com/invite/txUg39Vhc6) — addon development community; home of WowAce and WowInterface contributors
+- [WoWInterface](https://www.wowinterface.com/) — addon hosting and author forums
+- [CurseForge](https://www.curseforge.com/wow/addons) / [Wago.io](https://addons.wago.io/) — download and study popular addons
 <!-- CLAUDE_SKIP_END -->
 
 ## File Paths Reference
@@ -321,8 +325,9 @@ frame:Show();
 
 ### Saved Variables
 ```
-WTF\Account\[Account]\SavedVariables\
-WTF\Account\[Account]\[Server]\[Character]\SavedVariables\
+WTF\Account\[Account]\SavedVariables\                        (SavedVariables)
+WTF\Account\[Account]\[Server]\[Character]\SavedVariables\   (SavedVariablesPerCharacter)
+WTF\SavedVariables\                                          (SavedVariablesMachine — per installation)
 ```
 
 ### Error Log
