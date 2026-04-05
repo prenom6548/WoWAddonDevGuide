@@ -54,6 +54,9 @@ frame:SetScript("OnEvent", function(self, event, ...)
             print("UI was reloaded")
         end
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+        -- NOTE: CombatLogGetCurrentEventInfo() is deprecated in 12.0.0.
+        -- Combat log data is now restricted. Use C_DamageMeter for damage/healing data.
+        -- The deprecated global only works if loadDeprecationFallbacks CVar is enabled.
         local timestamp, subevent, _, sourceGUID, sourceName = CombatLogGetCurrentEventInfo()
         -- Process combat log event
     end
@@ -298,7 +301,7 @@ end
 
 - `PLAYER_REGEN_DISABLED` - Entered combat
 - `PLAYER_REGEN_ENABLED` - Left combat
-- `COMBAT_LOG_EVENT_UNFILTERED` - Combat log event (use `CombatLogGetCurrentEventInfo()`)
+- `COMBAT_LOG_EVENT_UNFILTERED` - Combat log event (deprecated in 12.0.0 — use `C_DamageMeter` instead)
 - `PLAYER_DAMAGE_DONE_MODS` - Damage modifiers changed
   - Payload: `unit`
 - `PARTY_KILL` - Party killed a unit (12.0.0+)
@@ -307,7 +310,13 @@ end
 - `CHAT_MSG_ENCOUNTER_EVENT` - Encounter event message (12.0.0+)
   - Payload: `text, ...`
 
-**Combat Log Processing**:
+**Combat Log Processing (DEPRECATED in 12.0.0)**:
+
+> **Warning**: `CombatLogGetCurrentEventInfo()` is deprecated in 12.0.0 and only works when the
+> `loadDeprecationFallbacks` CVar is enabled. The public `C_CombatLog` namespace does not expose
+> `GetCurrentEventInfo` to addons. For damage/healing data, use the `C_DamageMeter` API instead.
+> The example below is provided for legacy/Classic compatibility only.
+
 ```lua
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 frame:SetScript("OnEvent", function(self, event)
