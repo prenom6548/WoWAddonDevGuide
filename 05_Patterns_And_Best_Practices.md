@@ -1812,7 +1812,7 @@ end
 
 -- Get nth argument
 local function GetArg(n, ...)
-    return select(n, ...);
+    return (select(n, ...));
 end
 
 -- Get all args starting from n
