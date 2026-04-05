@@ -1544,6 +1544,7 @@ When a unit API returns a secret value, you cannot use it as a Lua table key -- 
 
 ```lua
 local _, className = UnitClass(unit)
+local r, g, b
 if issecretvalue(className) then
     -- C++ API handles secrets natively
     local color = C_ClassColor.GetClassColor(className)
