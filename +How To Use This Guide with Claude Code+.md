@@ -40,9 +40,9 @@ The WoW Claude Code integration uses a **coordinator/worker architecture** desig
 
 **Benefits:**
 - **Context Conservation**: Large documentation files are read in isolated agent context, not your main conversation
-- **Thoroughness**: The agent has full access to all 14 documentation files
+- **Thoroughness**: The agent has full access to all 16 documentation files
 - **Efficiency**: Coordinator stays lightweight; only results return to main conversation
-- **Sub-subagent Support**: For very large research tasks, the agent can spawn additional subagents
+- **Sub-agent Support**: For very large research tasks, the agent can spawn additional subagents
 
 ---
 
@@ -83,17 +83,28 @@ Edit `WoWAddon-Expert.md` and update the **Local Paths** section at the very top
 ```
 ## Local Paths (UPDATE THESE FOR YOUR SYSTEM)
 
-ADDONS_DIR: D:\Games\World of Warcraft\_retail_\Interface\AddOns\
-GUIDE_DIR:  D:\Games\World of Warcraft\_retail_\Interface\+++WoW Addon Development Guide (AI Generated)+++\
+ADDONS_DIR:    D:\Games\World of Warcraft\_retail_\Interface\AddOns\
+GUIDE_DIR:     D:\Games\World of Warcraft\_retail_\Interface\+++WoW Addon Development Guide (AI Generated)+++\
+BLIZZARD_SRC:  D:\Games\World of Warcraft\_retail_\Interface\+wow-ui-source+ (12.0.0)\
 ```
 
 Change these paths to match where you have:
 - **ADDONS_DIR**: Your WoW AddOns directory
 - **GUIDE_DIR**: This WoW Addon Development Guide directory
+- **BLIZZARD_SRC**: Your Blizzard UI source directory (the `+wow-ui-source+` folder you downloaded/extracted alongside the game client)
 
-**Note:** The coordinator file (`wow.md`) has no paths to update - only the agent file needs configuration.
+### Step 4: Update the Coordinator's User Configuration
 
-### Step 4: Verify Installation
+Edit `wow.md` and update the **User Configuration** table at the very top of the file:
+
+```
+| **AddOns Directory**    | D:\Games\World of Warcraft\_retail_\Interface\AddOns             |
+| **Blizzard UI Source**  | D:\Games\World of Warcraft\_retail_\Interface\+wow-ui-source+ (12.0.0) |
+```
+
+The coordinator passes these paths to the subagent on each delegation, so both files need to know where your WoW installation lives.
+
+### Step 5: Verify Installation
 
 1. Start a new Claude Code session
 2. Type `/` and look for `wow` in the command list
@@ -131,13 +142,13 @@ It does NOT read documentation files directly, keeping your main conversation co
 ### The Worker Agent (WoWAddon-Expert)
 
 The agent runs in an isolated context and:
-- Reads documentation files (all 14 guides)
+- Reads documentation files (all 16 guides)
 - Analyzes existing addons
 - Creates and edits addon files
 - Debugs issues
 - Has full edit authority
 
-**Large File Handling:** The agent knows which documentation files are large and can spawn sub-subagents to read them if needed.
+**Large File Handling:** The agent knows which documentation files are large and can spawn additional subagents to read them if needed.
 
 ---
 
@@ -295,23 +306,28 @@ If the agent reports it can't find documentation:
 | `WoWAddon-Expert.md` | Worker agent - copy to `~/.claude/agents/` |
 | [README.md](README.md) | Quick reference for installation |
 
-### Documentation Files (14 total)
+### Documentation Files (16 guides)
 
 | File | Lines | Description |
 |------|-------|-------------|
-| [00_MASTER_PROMPT.md](00_MASTER_PROMPT.md) | ~250 | Master overview |
-| [QUICK_START_GUIDE.md](QUICK_START_GUIDE.md) | ~310 | Quick start |
-| [01_API_Reference.md](01_API_Reference.md) | ~400 | API reference |
-| [02_Event_System.md](02_Event_System.md) | ~470 | Event system |
-| [03_UI_Framework.md](03_UI_Framework.md) | ~1,220 | UI framework |
-| [04_Addon_Structure.md](04_Addon_Structure.md) | ~1,630 | Addon structure |
-| [05_Patterns_And_Best_Practices.md](05_Patterns_And_Best_Practices.md) | ~1,050 | Best practices |
-| [06_Data_Persistence.md](06_Data_Persistence.md) | ~760 | Data persistence |
-| [07_Blizzard_UI_Examples.md](07_Blizzard_UI_Examples.md) | ~710 | Working examples |
-| [08_Community_Addon_Patterns.md](08_Community_Addon_Patterns.md) | ~710 | Community patterns |
-| [09_Addon_Libraries_Guide.md](09_Addon_Libraries_Guide.md) | ~930 | Libraries guide |
-| [10_Advanced_Techniques.md](10_Advanced_Techniques.md) | ~1,070 | Advanced techniques |
-| [11_API_Migration_Guide.md](11_API_Migration_Guide.md) | ~630 | API migration |
+| [00_MASTER_PROMPT.md](00_MASTER_PROMPT.md) | ~380 | Master overview |
+| [01_API_Reference.md](01_API_Reference.md) | ~1,010 | API reference |
+| [02_Event_System.md](02_Event_System.md) | ~830 | Event system |
+| [03_UI_Framework.md](03_UI_Framework.md) | ~1,750 | UI framework |
+| [04_Addon_Structure.md](04_Addon_Structure.md) | ~1,920 | Addon structure |
+| [05_Patterns_And_Best_Practices.md](05_Patterns_And_Best_Practices.md) | ~1,940 | Best practices |
+| [06_Data_Persistence.md](06_Data_Persistence.md) | ~1,380 | Data persistence |
+| [07_Blizzard_UI_Examples.md](07_Blizzard_UI_Examples.md) | ~1,390 | Working examples |
+| [08_Community_Addon_Patterns.md](08_Community_Addon_Patterns.md) | ~1,450 | Community patterns |
+| [09_Addon_Libraries_Guide.md](09_Addon_Libraries_Guide.md) | ~960 | Libraries guide |
+| [09a_Ace3_Library_Guide.md](09a_Ace3_Library_Guide.md) | ~4,010 | Comprehensive Ace3 framework reference |
+| [10_Advanced_Techniques.md](10_Advanced_Techniques.md) | ~2,060 | Advanced techniques |
+| [11_Housing_System_Guide.md](11_Housing_System_Guide.md) | ~1,780 | Housing system APIs |
+| [12_API_Migration_Guide.md](12_API_Migration_Guide.md) | ~3,520 | API migration and compatibility |
+| [12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md) | ~2,170 | 12.0+ secret values reference |
+| [13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md) | ~1,880 | Cooldown Viewer system |
+
+Additional entry points: [README.md](README.md), [QUICK_START_GUIDE.md](QUICK_START_GUIDE.md), [KNOWLEDGE_BASE_UPDATE_LOG.md](KNOWLEDGE_BASE_UPDATE_LOG.md).
 
 ---
 
