@@ -684,7 +684,7 @@ local function ProcessRaidMembers()
     return members
 end
 
--- Note: table.create() only helps with array parts, not hash parts
+-- Note: table.create(arraySizeHint[, nodeSizeHint]) can preallocate both array and hash parts
 ```
 
 ### Addon Profiling
