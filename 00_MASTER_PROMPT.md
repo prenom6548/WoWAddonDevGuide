@@ -68,7 +68,7 @@ The Midnight expansion (12.0.0) introduced massive security changes that broke m
 - Use `UnitHealthPercent(unit, usePredicted, CurveConstants.ScaleTo100)` for custom bars (returns NON-SECRET 0-100)
 - Use `issecretvalue(value)` to check if a value is secret
 - Damage meters, combat logs, and threat meters fundamentally changed
-- C_DamageMeter API data is also SECRET-protected (unusable by third-party addons)
+- C_DamageMeter API data is also SECRET-protected during combat (workarounds exist — see [12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md))
 
 **Removed/Changed APIs:**
 - Global action bar functions REMOVED - use `C_ActionBar` namespace
