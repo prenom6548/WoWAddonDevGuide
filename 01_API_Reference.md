@@ -491,18 +491,29 @@ C_InstanceEncounter.GetBossInfo(bossIndex)
 ```
 
 ### C_RestrictedActions - Addon Restriction Management
-Manage addon restrictions and secure execution context.
+Query addon restriction state (combat, encounters, M+, PvP, etc.) and check
+whether the current calling context is allowed to invoke protected functions.
 
 ```lua
--- Check restrictions
-C_RestrictedActions.IsActionRestricted(actionType)
-C_RestrictedActions.GetRestrictionReason(actionType)
-C_RestrictedActions.CanPerformAction(actionType)
+-- Check whether an addon restriction type is currently active
+-- (type is an Enum.AddOnRestrictionType value)
+C_RestrictedActions.IsAddOnRestrictionActive(type)       -- returns bool
 
--- Context checking
-C_RestrictedActions.IsInCombatLockdown()
-C_RestrictedActions.IsSecureContext()
+-- Get the full restriction state for an addon restriction type
+C_RestrictedActions.GetAddOnRestrictionState(type)       -- returns AddOnRestrictionState
+
+-- Check whether the current calling context may call protected functions
+-- on the supplied FrameScriptObject. Pass silent=true to suppress blocked-
+-- action error signaling if not allowed.
+C_RestrictedActions.CheckAllowProtectedFunctions(object, silent)  -- returns bool
+
+-- For combat lockdown checks, use the global (not namespaced):
+InCombatLockdown()                                       -- returns bool
 ```
+
+Related events: `ADDON_ACTION_BLOCKED`, `ADDON_ACTION_FORBIDDEN`,
+`ADDON_RESTRICTION_STATE_CHANGED`, `MACRO_ACTION_BLOCKED`,
+`MACRO_ACTION_FORBIDDEN`.
 
 ### C_CombatAudioAlert - TTS Accessibility
 Text-to-speech accessibility features for combat.
