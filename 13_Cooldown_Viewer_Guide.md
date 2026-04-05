@@ -1685,7 +1685,12 @@ dimCurve:AddPoint(0.1, 1.0)      -- at 0.1+ seconds remaining: full opacity
 local cooldownInfo = C_CooldownViewer.GetCooldownViewerCooldownInfo(child.cooldownID)
 local durationObj = cooldownInfo and C_Spell.GetSpellCooldownDuration(cooldownInfo.spellID)
 if durationObj then
-    child:SetAlphaFromCurve(dimCurve, durationObj)
+    -- There is no SetAlphaFromCurve method on any frame type. Evaluate the
+    -- curve against the remaining duration ourselves and call SetAlpha with
+    -- the numeric result. For a scalar curve (C_CurveUtil.CreateCurve) the
+    -- result is a number; EvaluateRemainingDuration is non-secret when the
+    -- curve itself is non-secret (SecretWhenCurveSecret = true).
+    child:SetAlpha(durationObj:EvaluateRemainingDuration(dimCurve))
 end
 ```
 
