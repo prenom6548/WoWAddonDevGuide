@@ -520,16 +520,32 @@ A critical taint pitfall involving the distinction between `OnTooltipCleared` an
 
 If a previous Blizzard tooltip interaction (e.g., hovering a world quest pin with item rewards) left `ItemTooltip` in a "shown" state, calling `GameTooltip:Show()` from addon code triggers `GameTooltip_CalculatePadding`. That function checks `ItemTooltip:IsShown()` and `BottomFontString:IsShown()` first -- if both are false, it takes an **early exit** with `SetPadding(0,0,0,0)` and performs NO dimension arithmetic whatsoever. But if `ItemTooltip` is still shown (stale), the function performs arithmetic on `ItemTooltip:GetSize()` from addon-tainted context, tainting the dimensions. This is why hiding `ItemTooltip` after `SetOwner()` is effective -- it ensures the early exit path is taken.
 
-**Always hide `ItemTooltip` after `SetOwner()`:**
+**When this workaround is needed.** This is NOT a universal hygiene rule for every tooltip. The stale-state bug only manifests when `ItemTooltip` or `insertedFrames` are involved — i.e., when your code (or Blizzard helper code you invoke) touches them. Plain text tooltips that only use `SetText`/`AddLine`/`Show` (like HandyNotes or ArkInventory) don't hit this path and don't need `ItemTooltip:Hide()`. The pattern becomes necessary when you:
+
+- Call `GameTooltip_AddQuestRewardsToTooltip` (which embeds item rewards into `ItemTooltip`).
+- Call `GameTooltip_ShowProgressBar` or any helper that inserts frames via `GameTooltip_InsertFrame`.
+- Your addon reuses a `GameTooltip` that a Blizzard code path may have already populated via those helpers.
+
+**Pattern when the workaround IS needed:**
 
 ```lua
 GameTooltip:SetOwner(myFrame, "ANCHOR_CURSOR")
+-- Clear any stale ItemTooltip state left from a prior Blizzard tooltip interaction.
 if GameTooltip.ItemTooltip then GameTooltip.ItemTooltip:Hide() end
+
 GameTooltip:AddLine("My tooltip text")
+
+-- If you invoke quest-reward helpers, wrap them in pcall: their internal arithmetic
+-- on ItemTooltip dimensions can crash when called from addon-tainted context.
+pcall(GameTooltip_AddQuestRewardsToTooltip, GameTooltip, questID, style)
+
+-- AddQuestRewardsToTooltip may re-show ItemTooltip — hide it again before :Show()
+-- so GameTooltip_CalculatePadding takes its early-exit path.
+if GameTooltip.ItemTooltip then GameTooltip.ItemTooltip:Hide() end
 GameTooltip:Show()
 ```
 
-Also avoid `GameTooltip_ShowProgressBar` — it calls `GameTooltip_InsertFrame` which does `frame:GetWidth()`, returning a secret value in tainted context. Use a text fallback instead:
+Also avoid `GameTooltip_ShowProgressBar` directly — it calls `GameTooltip_InsertFrame` which does `frame:GetWidth()`, returning a secret value in tainted context. Use a text fallback instead:
 
 ```lua
 -- Instead of: GameTooltip_ShowProgressBar(GameTooltip, ...)
@@ -537,28 +553,37 @@ Also avoid `GameTooltip_ShowProgressBar` — it calls `GameTooltip_InsertFrame` 
 GameTooltip:AddLine(QUEST_DASH .. PERCENTAGE_STRING:format(percent), r, g, b)
 ```
 
-#### Private Tooltip Pattern (Definitive Fix for GameTooltip Taint)
+#### Private Tooltip Pattern (Scanning and Specialized Display)
 
-The most reliable way to eliminate ALL GameTooltip taint is to avoid the shared `GameTooltip` entirely. Create a private tooltip frame for your addon's use:
+A private tooltip frame is a hidden `GameTooltip` you create yourself and never show to the user — you populate it via `SetHyperlink`/`SetQuestLogItem`/etc. and read the line text programmatically. This is the standard pattern across addons (ArkInventory, Broker_WorldQuests) for extracting tooltip data without touching the shared `GameTooltip`:
 
 ```lua
-local tooltip = CreateFrame("GameTooltip", "MyAddonTooltip", UIParent, "GameTooltipTemplate,BackdropTemplate")
+-- Scanning tooltip — created once at load, never shown to the user.
+local scanTip = CreateFrame("GameTooltip", "MyAddonScanTooltip", nil, "GameTooltipTemplate,BackdropTemplate")
+scanTip:Hide()
 
--- Required for shift+hover gear comparison to work
-tooltip.supportsItemComparison = true
-tooltip.shoppingTooltips = { ShoppingTooltip1, ShoppingTooltip2 }
-
--- Use exactly like GameTooltip
-tooltip:SetOwner(myFrame, "ANCHOR_RIGHT")
-tooltip:SetHyperlink(itemLink)
-tooltip:Show()
+-- Populate and read lines programmatically
+scanTip:SetOwner(UIParent, "ANCHOR_NONE")
+scanTip:SetHyperlink(itemLink)
+for i = 1, scanTip:NumLines() do
+    local line = _G[scanTip:GetName() .. "TextLeft" .. i]
+    local text = line and line:GetText()
+    -- …inspect text…
+end
 ```
 
-This completely avoids `GameTooltip_CalculatePadding`, `ItemTooltip` stale state, and all other shared tooltip taint vectors. The `GameTooltipTemplate` provides full visual parity with the default tooltip. This pattern is used by HandyNotes and other map pin addons to avoid taint when displaying quest/item tooltips on the world map.
+**Private tooltips for display (less common).** You CAN create a private tooltip and show it to the user as a GameTooltip replacement — some map pin addons do this to insulate themselves from shared-tooltip taint. It's not a universal win: addon-created tooltips don't integrate with the shared tooltip's z-ordering/positioning in the same way, can't piggyback on Blizzard's `OnTooltipSetItem` hook points, and don't automatically participate in shift+hover gear comparison unless you wire it up:
 
-**When to use a private tooltip vs. patching GameTooltip:**
-- **Private tooltip**: Best for map pins, custom frames, or any context where you control the tooltip lifecycle. Eliminates taint entirely.
-- **Patching GameTooltip**: Only necessary when you must modify or extend the shared tooltip that Blizzard code also uses (e.g., hooking `OnTooltipSetItem`).
+```lua
+tooltip.supportsItemComparison = true
+tooltip.shoppingTooltips = { ShoppingTooltip1, ShoppingTooltip2 }
+```
+
+For most display cases the shared `GameTooltip` is the right choice — it works fine for plain text tooltips (HandyNotes, ArkInventory), and the `ItemTooltip:Hide()` workaround above handles the one specific taint vector that quest-reward helpers trigger.
+
+**When to use a private tooltip:**
+- **Scanning** (primary use case): read tooltip line text via `SetHyperlink`/`SetQuestLogItem` without disturbing the visible tooltip. Create once at load, never show.
+- **Display**: only when you have a specific reason to isolate from the shared `GameTooltip`'s lifecycle (e.g., you need a tooltip that persists independently of Blizzard UI). Accept the trade-offs above.
 
 #### Tooltip Line Layout Changes (12.0.0)
 
