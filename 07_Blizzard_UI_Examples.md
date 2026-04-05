@@ -247,11 +247,12 @@ function AuraButton_Update(button, unit, index, filter)
     button:Show()
 end
 
--- Alternative: Query by spell ID (12.0 preferred method)
-function AuraButton_UpdateBySpellID(button, unit, spellID)
-    local aura = C_UnitAuras.GetAuraDataBySpellName(unit, spellID)
+-- Alternative: Query player aura by spell ID
+-- Note: GetPlayerAuraBySpellID only works for the player unit
+function AuraButton_UpdateBySpellID(button, spellID)
+    local aura = C_UnitAuras.GetPlayerAuraBySpellID(spellID)
     if aura then
-        AuraButton_Update(button, unit, aura.auraInstanceID)
+        AuraButton_Update(button, "player", aura.auraInstanceID)
     end
 end
 ```
