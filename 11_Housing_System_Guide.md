@@ -1376,6 +1376,14 @@ for _, event in ipairs(housingEvents) do
     HousingMonitor:RegisterEvent(event)
 end
 
+-- Precompute a reverse-lookup {enumValue -> name} once at file load,
+-- so the HOUSE_EDITOR_MODE_CHANGED handler doesn't have to pairs() the
+-- enum on every fire.
+local HouseEditorModeNames = {}
+for name, value in pairs(Enum.HouseEditorMode) do
+    HouseEditorModeNames[value] = name
+end
+
 -- Event handler
 HousingMonitor:SetScript("OnEvent", function(self, event, ...)
     -- Call any registered callbacks
@@ -1388,13 +1396,7 @@ HousingMonitor:SetScript("OnEvent", function(self, event, ...)
     -- Default logging
     if event == "HOUSE_EDITOR_MODE_CHANGED" then
         local mode = ...
-        local modeName = "Unknown"
-        for name, value in pairs(Enum.HouseEditorMode) do
-            if value == mode then
-                modeName = name
-                break
-            end
-        end
+        local modeName = HouseEditorModeNames[mode] or "Unknown"
         print(string.format("[Housing] Editor mode: %s", modeName))
 
     elseif event == "HOUSING_DECOR_PLACE_SUCCESS" then
