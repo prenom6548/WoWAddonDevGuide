@@ -619,9 +619,9 @@ canaccessvalue(secretValue)
 secretwrap(value)
     -- Returns: wrapped secret value
 
--- Remove secret values from a table (for logging/display)
-scrubsecretvalues(table)
-    -- Returns: table with secrets replaced with placeholder strings
+-- Remove secret values from varargs (for logging/display)
+scrubsecretvalues(...)
+    -- Returns: transformed values with secrets replaced by nil
 ```
 
 ### How Secrets Affect Addons
@@ -659,19 +659,20 @@ When a player is in ANY combat (not limited to instanced content), tainted addon
 local message = string.concat("Health: ", secretHealthValue)
 
 -- Scrub secrets before logging
-local debugInfo = {
-    targetHealth = UnitHealth("target"),
-    targetPower = UnitPower("target")
-}
-local safeInfo = scrubsecretvalues(debugInfo)
-print("Debug: " .. safeInfo.targetHealth)  -- Will show "[SECRET]" if protected
+local health, power = scrubsecretvalues(UnitHealth("target"), UnitPower("target"))
+-- health and power are now nil if they were secret, or the real number if not
+if health then
+    print("Debug: " .. health)
+else
+    print("Debug: health is secret")
+end
 ```
 
 ### Best Practices
 
 1. **Check before arithmetic**: Always check `issecretvalue()` before doing math with potentially secret values
-2. **Use string.concat()**: For string building with potentially secret values
-3. **Scrub for display**: Use `scrubsecretvalues()` before displaying debug information
+2. **Use `SetFormattedText()`**: For displaying values that may be secret on FontStrings — it handles secrets at the C++ level
+3. **Scrub for display**: Use `scrubsecretvalues()` before logging — secrets become `nil`, not placeholder strings
 4. **Don't fight the system**: If a value is secret, it's intentionally protected
 
 #### 12.0.1 Hotfix Changes
