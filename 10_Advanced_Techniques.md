@@ -401,10 +401,10 @@ ZGV.IsClassic = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
 -- Load expansion-specific files
 if ZGV.IsRetail then
     -- Load Retail-specific code
-    LoadAddOn("ZygorGuidesViewer_Retail")
+    C_AddOns.LoadAddOn("ZygorGuidesViewer_Retail")
 elseif ZGV.IsClassic then
     -- Load Classic-specific code
-    LoadAddOn("ZygorGuidesViewer_Classic")
+    C_AddOns.LoadAddOn("ZygorGuidesViewer_Classic")
 end
 ```
 
@@ -1412,8 +1412,8 @@ Config.lua
 ```lua
 -- In ElvUI core
 function E:ToggleOptions()
-    if not IsAddOnLoaded("ElvUI_Options") then
-        LoadAddOn("ElvUI_Options")
+    if not C_AddOns.IsAddOnLoaded("ElvUI_Options") then
+        C_AddOns.LoadAddOn("ElvUI_Options")
     end
 
     -- Options addon is now loaded
