@@ -986,7 +986,7 @@ end
 /run DevTools_Dump(MyAddonDB)
 
 -- Count keys
-/run print("Keys:", count(MyAddonDB))
+/run print("Keys:", table.count(MyAddonDB))
 
 -- Check size
 /run UpdateAddOnMemoryUsage(); print("Size:", GetAddOnMemoryUsage("MyAddon") .. " KB")
@@ -1032,7 +1032,7 @@ local function DumpDatabase()
 
     print("=== MyAddon Database ===")
     print("Version:", MyAddonDB.version)
-    print("Characters:", count(MyAddonDB.characters))
+    print("Characters:", table.count(MyAddonDB.characters))
 
     for key, data in pairs(MyAddonDB.characters) do
         print(format("  %s: Level %d, Gold %d",
