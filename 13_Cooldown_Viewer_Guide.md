@@ -1165,10 +1165,10 @@ The `Cooldown` frame type is a specialized frame widget that displays radial coo
 
 | Method | Parameters | Status |
 |--------|-----------|--------|
-| SetCooldown | start, duration, modRate=1 | **RESTRICTED** (12.0.1) |
-| SetCooldownDuration | duration, modRate=1 | **RESTRICTED** (12.0.1) |
-| SetCooldownFromExpirationTime | expirationTime, duration, modRate=1 | **RESTRICTED** (12.0.1) |
-| SetCooldownUNIX | start, duration, modRate=1 | **RESTRICTED** (12.0.1) |
+| SetCooldown | start, duration, modRate=1 | **RESTRICTED (tainted+secret)** |
+| SetCooldownDuration | duration, modRate=1 | **RESTRICTED (tainted+secret)** |
+| SetCooldownFromExpirationTime | expirationTime, duration, modRate=1 | **RESTRICTED (tainted+secret)** |
+| SetCooldownUNIX | start, duration, modRate=1 | **RESTRICTED (tainted+secret)** |
 | SetCooldownFromDurationObject | duration (LuaDurationObject), clearIfZero=true | **SAFE** |
 
 The four restricted methods have `SecretArguments = "AllowedWhenTainted"` and add the Cooldown secret aspect — they fail from tainted addon code with secret values in 12.0.1+. `SetCooldownFromDurationObject` has `SecretArguments = "AllowedWhenUntainted"` and is the **only** method usable from tainted code. Use `C_Spell.GetSpellCooldownDuration()` or `C_DurationUtil.CreateDuration()` to obtain Duration objects.
