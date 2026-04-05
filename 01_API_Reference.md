@@ -169,7 +169,7 @@ C_Item.GetItemQuality(itemLocation)
 **C_ItemSocketInfo Namespace (11.2.5+)**:
 ```lua
 -- Replaces global Socket APIs
-C_ItemSocketInfo.GetSocketInfo(socketIndex)
+C_ItemSocketInfo.GetSocketItemInfo(socketIndex)
 C_ItemSocketInfo.GetNumSockets()
 C_ItemSocketInfo.GetExistingSocketLink(socketIndex)
 C_ItemSocketInfo.SocketContainerItem(bagID, slotIndex)
@@ -890,7 +890,7 @@ end
 
 | Old API (Deprecated) | New API (11.2.5+) |
 |---------------------|-------------------|
-| `GetSocketInfo(index)` | `C_ItemSocketInfo.GetSocketInfo(index)` |
+| `GetSocketInfo(index)` | `C_ItemSocketInfo.GetSocketItemInfo(index)` |
 | `GetNumSockets()` | `C_ItemSocketInfo.GetNumSockets()` |
 | `GetExistingSocketLink(index)` | `C_ItemSocketInfo.GetExistingSocketLink(index)` |
 | `SocketContainerItem(bag, slot)` | `C_ItemSocketInfo.SocketContainerItem(bag, slot)` |
