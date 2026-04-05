@@ -1105,10 +1105,12 @@ In 12.0.0 (Midnight), Blizzard introduced "secret values" to prevent addons from
 ### Checking Restriction State
 
 ```lua
--- Check if restrictions are currently active
-local function AreRestrictionsActive()
+-- Check if a specific restriction type is currently active.
+-- IsAddOnRestrictionActive requires a type argument (non-nilable) — one of
+-- Enum.AddOnRestrictionType: Combat, Encounter, ChallengeMode, PvPMatch, Map.
+local function IsRestrictionActive(restrictionType)
     if C_RestrictedActions and C_RestrictedActions.IsAddOnRestrictionActive then
-        return C_RestrictedActions.IsAddOnRestrictionActive()
+        return C_RestrictedActions.IsAddOnRestrictionActive(restrictionType)
     end
     return false
 end
@@ -1119,7 +1121,7 @@ frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_REGEN_DISABLED" then
-        if AreRestrictionsActive() then
+        if IsRestrictionActive(Enum.AddOnRestrictionType.Combat) then
             print("Combat restrictions active - some features limited")
         end
     end
