@@ -836,7 +836,6 @@ This API returns quests from the queried map AND all child sub-zone maps:
 
 ```lua
 -- OLD globals (REMOVED):
-GetActionInfo(slot)
 GetActionTexture(slot)
 GetActionCooldown(slot)
 GetActionCount(slot)
@@ -850,7 +849,6 @@ HasAction(slot)
 ActionHasRange(slot)
 
 -- NEW C_ActionBar namespace:
-C_ActionBar.GetActionInfo(slot)       -- id may be SECRET during combat
 C_ActionBar.GetActionTexture(slot)    -- May be SECRET during combat
 C_ActionBar.GetActionCooldown(slot)
 C_ActionBar.GetActionCount(slot)
@@ -874,11 +872,11 @@ C_ActionBar.IsActionInRange(slot, unit)
 **Migration Example:**
 ```lua
 -- Compatibility wrapper for action bar addons
-local GetActionInfo = C_ActionBar and C_ActionBar.GetActionInfo or GetActionInfo
+local GetActionTexture = C_ActionBar and C_ActionBar.GetActionTexture or GetActionTexture
 local HasAction = C_ActionBar and C_ActionBar.HasAction or HasAction
 
 -- Use wrapped functions
-local actionType, id, subType = GetActionInfo(slot)
+local texture = GetActionTexture(slot)
 ```
 
 #### C_CombatLog Namespace (Replaces CombatLog Globals)
@@ -2892,7 +2890,7 @@ IsEncounterInProgress\(
 /run if C_RestrictedActions then print(C_RestrictedActions.IsInRestrictedState()) end
 
 -- Test action bar API
-/run if C_ActionBar then local t,i,s = C_ActionBar.GetActionInfo(1); print("Type:", t, "ID:", i) end
+/run if C_ActionBar then print("Texture:", C_ActionBar.GetActionTexture(1), "HasAction:", C_ActionBar.HasAction(1)) end
 
 -- Test combat log API
 /run if C_CombatLog then print("Entries:", C_CombatLog.GetNumEntries()) end
@@ -3084,7 +3082,6 @@ end
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 frame:SetScript("OnEvent", function(self, event, slot)
-    local actionType, id, subType = GetActionInfo(slot)
     local texture = GetActionTexture(slot)
     local usable = IsUsableAction(slot)
 
@@ -3108,12 +3105,11 @@ local frame = CreateFrame("Frame")
 frame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 frame:SetScript("OnEvent", function(self, event, slot)
     -- Use new C_ActionBar namespace
-    local actionType, id, subType = C_ActionBar.GetActionInfo(slot)
     local texture = C_ActionBar.GetActionTexture(slot)
     local usable = C_ActionBar.IsUsableAction(slot)
 
     -- Check for secret values during combat
-    if issecretvalue(id) then
+    if issecretvalue(texture) then
         -- Value is secret, defer processing or use cached data
         ScheduleOutOfCombat(function()
             UpdateButtonDeferred(slot)
@@ -3142,20 +3138,16 @@ local ActionBarAPI = {}
 
 if C_ActionBar then
     -- 12.0.0+
-    ActionBarAPI.GetActionInfo = C_ActionBar.GetActionInfo
     ActionBarAPI.GetActionTexture = C_ActionBar.GetActionTexture
     ActionBarAPI.GetActionCooldown = C_ActionBar.GetActionCooldown
     ActionBarAPI.HasAction = C_ActionBar.HasAction
     ActionBarAPI.IsUsableAction = C_ActionBar.IsUsableAction
-    ActionBarAPI.PickupAction = C_ActionBar.PickupAction
 else
     -- Pre-12.0.0 (fallback to globals)
-    ActionBarAPI.GetActionInfo = GetActionInfo
     ActionBarAPI.GetActionTexture = GetActionTexture
     ActionBarAPI.GetActionCooldown = GetActionCooldown
     ActionBarAPI.HasAction = HasAction
     ActionBarAPI.IsUsableAction = IsUsableAction
-    ActionBarAPI.PickupAction = PickupAction
 end
 
 -- Combat log compatibility
@@ -3167,12 +3159,12 @@ else
 end
 
 -- Secret value safe wrapper
-local function SafeGetActionInfo(slot)
-    local actionType, id, subType = ActionBarAPI.GetActionInfo(slot)
-    if issecretvalue and issecretvalue(id) then
-        return nil, nil, nil, true  -- Last return indicates secret
+local function SafeGetActionTexture(slot)
+    local texture = ActionBarAPI.GetActionTexture(slot)
+    if issecretvalue and issecretvalue(texture) then
+        return nil, true  -- Second return indicates secret
     end
-    return actionType, id, subType, false
+    return texture, false
 end
 ```
 
@@ -3388,8 +3380,7 @@ eventFrame:RegisterEvent("DAMAGE_METER_COMBAT_SESSION_UPDATED")
 | Old API | New API | Version | Notes |
 |---------|---------|---------|-------|
 | `GetMouseFocus()` | `GetMouseFoci()[1]` | 12.0.0 | Returns table; use compat wrapper |
-| `GetActionInfo(slot)` | `C_ActionBar.GetActionInfo(slot)` | 12.0.0 | Secret values in combat - see [12a](12a_Secret_Safe_APIs.md) |
-| `GetActionTexture(slot)` | `C_ActionBar.GetActionTexture(slot)` | 12.0.0 | Namespace move |
+| `GetActionTexture(slot)` | `C_ActionBar.GetActionTexture(slot)` | 12.0.0 | Secret values in combat - see [12a](12a_Secret_Safe_APIs.md) |
 | `GetActionCooldown(slot)` | `C_ActionBar.GetActionCooldown(slot)` | 12.0.0 | Namespace move |
 | `HasAction(slot)` | `C_ActionBar.HasAction(slot)` | 12.0.0 | Namespace move |
 | `IsUsableAction(slot)` | `C_ActionBar.IsUsableAction(slot)` | 12.0.0 | Namespace move |

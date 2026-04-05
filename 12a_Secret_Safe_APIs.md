@@ -145,10 +145,10 @@ local canAccess = canaccessvalue(value)
 --   boolean: true if the caller can access the value, false otherwise
 
 -- Example:
-local spellID = C_ActionBar.GetActionInfo(slot)
-if canaccessvalue(spellID) then
+local chargeInfo = C_ActionBar.GetActionCharges(slot)
+if canaccessvalue(chargeInfo) then
     -- Safe to use
-    ProcessSpellID(spellID)
+    ProcessChargeInfo(chargeInfo)
 end
 ```
 
@@ -169,10 +169,11 @@ local canAccessAll = canaccessallvalues(value1, value2, value3, ...)
 --   boolean: true if ALL values are accessible, false if ANY is secret/inaccessible
 
 -- Example:
-local actionType, spellID, subType = C_ActionBar.GetActionInfo(slot)
-if canaccessallvalues(actionType, spellID, subType) then
+local cooldownInfo = C_ActionBar.GetActionCooldown(slot)
+local chargeInfo = C_ActionBar.GetActionCharges(slot)
+if canaccessallvalues(cooldownInfo, chargeInfo) then
     -- All values are accessible
-    ProcessActionInfo(actionType, spellID, subType)
+    ProcessActionState(cooldownInfo, chargeInfo)
 end
 ```
 
@@ -773,9 +774,9 @@ All C_ActionBar functions may return secret values during combat:
 
 | API | Returns | Notes |
 |-----|---------|-------|
-| `C_ActionBar.GetActionInfo(slot)` | actionType, id, subType | id may be secret |
 | `C_ActionBar.GetActionTexture(slot)` | texture | May be secret |
 | `C_ActionBar.IsUsableAction(slot)` | usable | May be secret |
+| `C_ActionBar.GetActionCharges(slot)` | chargeInfo | May be secret when cooldown-restricted |
 
 ### C_DamageMeter APIs
 
@@ -1409,15 +1410,15 @@ end
 local pendingUpdates = {}
 
 local function UpdateActionButton(slot)
-    local actionType, spellID = C_ActionBar.GetActionInfo(slot)
+    local texture = C_ActionBar.GetActionTexture(slot)
 
-    if issecretvalue(spellID) then
+    if issecretvalue(texture) then
         -- Queue for later
         pendingUpdates[slot] = true
         return
     end
 
-    ProcessActionButton(slot, actionType, spellID)
+    ProcessActionButton(slot, texture)
 end
 
 local frame = CreateFrame("Frame")

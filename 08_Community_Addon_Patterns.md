@@ -838,22 +838,21 @@ end
 
 ### Action Bar Addons (Bartender, ElvUI, Dominos)
 
-**12.0 Changes - BREAKING:**
-- **Global action bar functions REMOVED** - Must use C_ActionBar namespace exclusively
-- **Major rewrite required** for any addon using legacy action bar APIs
+**12.0 Changes:**
+- **Many global action bar functions moved to C_ActionBar namespace** (e.g., `GetActionTexture`, `HasAction`, `IsUsableAction`, `PickupAction`) — the global `GetActionInfo(slot)` remains available
+- **Some addons may need updates** for functions that were migrated
 - **New profiler metrics** available for optimization
 
 **Migration Strategy:**
 ```lua
--- 12.0 REQUIRED: All action bar functions must use C_ActionBar
--- Legacy functions like GetActionInfo(), PickupAction() are REMOVED
+-- 12.0: Prefer C_ActionBar namespace for migrated functions
+-- Note: Global GetActionInfo(slot) is NOT removed — still works in 12.0.0
 
--- Modern action bar slot management
-local function GetActionSlotInfo(slot)
-    -- 12.0: Must use C_ActionBar namespace
-    if C_ActionBar.GetActionInfo then
-        local actionType, id, subType = C_ActionBar.GetActionInfo(slot)
-        return actionType, id, subType
+-- Modern action bar texture lookup
+local function GetActionSlotTexture(slot)
+    -- 12.0: Use C_ActionBar namespace for migrated functions
+    if C_ActionBar.GetActionTexture then
+        return C_ActionBar.GetActionTexture(slot)
     end
     return nil
 end
@@ -902,7 +901,7 @@ local ActionBarCompat = {}
 function ActionBarCompat:Initialize()
     -- Verify required APIs exist
     assert(C_ActionBar, "C_ActionBar namespace required for 12.0+")
-    assert(C_ActionBar.GetActionInfo, "C_ActionBar.GetActionInfo required")
+    assert(C_ActionBar.GetActionTexture, "C_ActionBar.GetActionTexture required")
     assert(C_ActionBar.HasAction, "C_ActionBar.HasAction required")
 end
 
@@ -1388,7 +1387,7 @@ local APICompat = {}
 APICompat.features = {
     hasHousing = C_Housing ~= nil,
     hasEncodingUtil = C_EncodingUtil ~= nil,
-    hasNewActionBar = C_ActionBar ~= nil and C_ActionBar.GetActionInfo ~= nil,
+    hasNewActionBar = C_ActionBar ~= nil and C_ActionBar.GetActionTexture ~= nil,
     hasNewTransmog = C_TransmogOutfitInfo ~= nil,
     hasOfficialDamageMeter = C_DamageMeter ~= nil, -- NOTE: API exists but data is secret-protected!
     hasEncounterTimeline = C_EncounterTimeline ~= nil,

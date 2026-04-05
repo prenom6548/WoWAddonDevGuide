@@ -1795,10 +1795,10 @@ function UniversalAddon:Initialize()
     -- Handle API differences in code
     if isMainline then
         -- Use C_ActionBar namespace (12.0.0+)
-        self.GetActionInfo = C_ActionBar and C_ActionBar.GetActionInfo or GetActionInfo
+        self.GetActionTexture = C_ActionBar and C_ActionBar.GetActionTexture or GetActionTexture
     else
         -- Use legacy globals on Classic
-        self.GetActionInfo = GetActionInfo
+        self.GetActionTexture = GetActionTexture
     end
 end
 ```

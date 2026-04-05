@@ -40,7 +40,6 @@ Many global functions have been removed. Use C_* namespaces:
 
 | Old (Removed) | New (12.0.0) |
 |---------------|--------------|
-| `GetActionInfo()` | `C_ActionBar.GetActionInfo()` |
 | `GetActionTexture()` | `C_ActionBar.GetActionTexture()` |
 | `CombatLogGetCurrentEventInfo()` | `C_CombatLog.GetCurrentEventInfo()` |
 
@@ -253,7 +252,8 @@ local spellInfo = C_Spell.GetSpellInfo(spellID);
 local quests = C_QuestLog.GetAllCompletedQuestIDs();
 
 -- Action bar (12.0.0 - use C_ActionBar)
-local actionType, id, subType = C_ActionBar.GetActionInfo(slot);
+local texture = C_ActionBar.GetActionTexture(slot);
+local hasAction = C_ActionBar.HasAction(slot);
 
 -- Damage meter (12.0.0) - WARNING: Data is SECRET-PROTECTED!
 -- Third-party addons CANNOT use this API - data values are hidden

@@ -387,7 +387,6 @@ Replaces global action bar functions with a structured namespace.
 
 ```lua
 -- Get action bar slot information
-C_ActionBar.GetActionInfo(slot)
 C_ActionBar.GetActionTexture(slot)
 C_ActionBar.GetActionText(slot)
 C_ActionBar.GetActionCooldown(slot)  -- Returns cooldownInfo (isActive, isEnabled, maxCharges non-secret in 12.0.1; includes cooldown aura effects)
@@ -652,7 +651,7 @@ end
 When a player is in ANY combat (not limited to instanced content), tainted addon code returns secret values for:
 
 1. **Unit health/power data**: `UnitHealth()`, `UnitHealthMax()`, `UnitPower()`, `UnitPowerMax()`, `UnitGetTotalAbsorbs()`, `UnitGetIncomingHeals()` — all return secrets during combat anywhere (open-world, dungeons, raids, PvP)
-2. **Action bar state**: `C_ActionBar.GetActionInfo()` and related functions may return secret values during combat
+2. **Action bar state**: `C_ActionBar.GetActionCooldown()`, `C_ActionBar.GetActionCharges()`, and related cooldown/charge functions may return secret values during combat
 3. **Aura data**: All aura data fields except `auraInstanceID` are secret during combat (not just instanced combat)
 
 ### Working with Secrets
@@ -828,12 +827,12 @@ end
 ### 5. API Version Checking
 ```lua
 -- Check if new API exists before using
-if C_ActionBar and C_ActionBar.GetActionInfo then
+if C_ActionBar and C_ActionBar.GetActionTexture then
     -- Use new 12.0.0 API
-    local info = C_ActionBar.GetActionInfo(slot)
+    local texture = C_ActionBar.GetActionTexture(slot)
 else
     -- Fall back to legacy
-    local actionType, id, subType = GetActionInfo(slot)
+    local texture = GetActionTexture(slot)
 end
 ```
 
@@ -873,7 +872,6 @@ end
 
 | Old API (Deprecated) | New API (12.0.0+) |
 |---------------------|-------------------|
-| `GetActionInfo(slot)` | `C_ActionBar.GetActionInfo(slot)` |
 | `GetActionTexture(slot)` | `C_ActionBar.GetActionTexture(slot)` |
 | `HasAction(slot)` | `C_ActionBar.HasAction(slot)` |
 | `IsCurrentAction(slot)` | `C_ActionBar.IsCurrentAction(slot)` |
@@ -906,11 +904,11 @@ end
 
 ```lua
 -- Create compatibility layer for different WoW versions
-local function GetActionInfoCompat(slot)
-    if C_ActionBar and C_ActionBar.GetActionInfo then
-        return C_ActionBar.GetActionInfo(slot)
+local function GetActionTextureCompat(slot)
+    if C_ActionBar and C_ActionBar.GetActionTexture then
+        return C_ActionBar.GetActionTexture(slot)
     else
-        return GetActionInfo(slot)
+        return GetActionTexture(slot)
     end
 end
 

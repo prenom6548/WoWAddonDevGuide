@@ -130,7 +130,7 @@ Key files to check in BLIZZARD_SRC:
 - Create frame names that conflict with Blizzard UI
 - Poll in `OnUpdate` when events can be used
 - Assume API availability without version checks
-- Use global action bar functions like GetActionInfo() (use C_ActionBar.GetActionInfo)
+- Use deprecated global action bar functions like GetActionTexture(), HasAction(), IsUsableAction() (use C_ActionBar namespace)
 - Parse combat log directly — use `C_DamageMeter` API instead (12.0.0+). Data fields are SECRET during combat but usable via `pcall(string.format)` for display text, `StatusBar:SetValue()` for bar scaling, array index for sort order, and post-combat re-parse for clean data
 - Use `UnitHealth()`/`UnitPower()` for arithmetic during combat (use percentage APIs instead)
 - **USE print() FOR DEBUG OUTPUT** - This is a HARD RULE. Debug output MUST go to a scrollable, copy-pasteable window, NOT the chat frame. If the addon already has a debug system (like `/npdebug`), USE IT. If not, create one. NO EXCEPTIONS.
@@ -297,7 +297,7 @@ end
 **APIs That Return Secrets During Combat:**
 - `UnitHealth()`, `UnitHealthMax()`, `UnitPower()`, `UnitPowerMax()`
 - `UnitGetTotalAbsorbs()`, `UnitGetIncomingHeals()`
-- `C_ActionBar.GetActionInfo()` (id field)
+- `C_ActionBar.GetActionTexture()`, `C_ActionBar.GetActionCharges()`, `C_ActionBar.GetActionCooldown()`, `C_ActionBar.IsUsableAction()` (cooldown-restricted fields)
 - All C_DamageMeter data fields (SECRET during combat but usable — see NEVER rules above for workarounds)
 - `UnitCreatureID()` returns `nil` (not secret) when unit identity is secret (12.0.1)
 - `Frame:GetEffectiveAlpha()`, `StatusBar:IsStatusBarDesaturated()`, `Texture:IsDesaturated()` return `nil` with secret aspects (12.0.1)

@@ -118,7 +118,7 @@ The Midnight expansion (12.0.0) introduced massive security changes that broke m
 - `C_Transmog` - Redesigned transmog system
 
 **Deprecated/Removed in 12.0:**
-- Global `GetActionInfo()`, `PickupAction()`, etc. - Use `C_ActionBar`
+- Global `PickupAction()`, `GetActionTexture()`, etc. - Use `C_ActionBar`
 - Direct CLEU parsing for damage - Use `C_DamageMeter` or `C_CombatLog`
 - `GetTransmogSlotInfo()` and related - Use `C_Transmog`
 
@@ -157,7 +157,7 @@ C_Map.GetPlayerMapPosition()
 C_Timer.After(seconds, callback)
 -- New 12.0 namespaces:
 C_DamageMeter.GetDamageSummary()
-C_ActionBar.GetActionInfo(slot)
+C_ActionBar.GetActionTexture(slot)
 C_CombatLog.GetCurrentEventInfo()
 C_Housing.GetPlotInfo()
 ```
@@ -173,8 +173,8 @@ CreateFrame("Frame", "name", parent, "template")
 **API Existence Checking (Required for 12.0 Compatibility):**
 ```lua
 -- Always check before using potentially removed APIs
-if C_ActionBar and C_ActionBar.GetActionInfo then
-    local info = C_ActionBar.GetActionInfo(slot)
+if C_ActionBar and C_ActionBar.GetActionTexture then
+    local texture = C_ActionBar.GetActionTexture(slot)
 end
 ```
 
@@ -287,11 +287,11 @@ end
 **API Existence Checking:**
 ```lua
 -- Always verify APIs exist for cross-version compatibility
-local function GetActionBarInfo(slot)
-    if C_ActionBar and C_ActionBar.GetActionInfo then
-        return C_ActionBar.GetActionInfo(slot)
-    elseif GetActionInfo then  -- Legacy fallback
-        return GetActionInfo(slot)
+local function GetActionBarTexture(slot)
+    if C_ActionBar and C_ActionBar.GetActionTexture then
+        return C_ActionBar.GetActionTexture(slot)
+    elseif GetActionTexture then  -- Legacy fallback
+        return GetActionTexture(slot)
     end
     return nil
 end
