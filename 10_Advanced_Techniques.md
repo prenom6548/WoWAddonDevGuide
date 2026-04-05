@@ -1716,22 +1716,23 @@ end
 
 ```lua
 local frame = CreateFrame("Frame")
-frame:RegisterEvent("DAMAGE_METER_DATA_UPDATED")
-frame:RegisterEvent("DAMAGE_METER_SESSION_STARTED")
-frame:RegisterEvent("DAMAGE_METER_SESSION_ENDED")
+frame:RegisterEvent("DAMAGE_METER_COMBAT_SESSION_UPDATED")
+frame:RegisterEvent("DAMAGE_METER_CURRENT_SESSION_UPDATED")
+frame:RegisterEvent("DAMAGE_METER_RESET")
 
 frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "DAMAGE_METER_DATA_UPDATED" then
-        local sessionID = ...
-        MyDamageMeter:OnDataUpdated(sessionID)
+    if event == "DAMAGE_METER_COMBAT_SESSION_UPDATED" then
+        -- Payload: type (DamageMeterType), sessionID (number)
+        local meterType, sessionID = ...
+        MyDamageMeter:OnSessionUpdated(meterType, sessionID)
 
-    elseif event == "DAMAGE_METER_SESSION_STARTED" then
-        local sessionID, sessionType = ...
-        MyDamageMeter:OnSessionStarted(sessionID, sessionType)
+    elseif event == "DAMAGE_METER_CURRENT_SESSION_UPDATED" then
+        -- No payload — fires when the current session changes
+        MyDamageMeter:OnCurrentSessionChanged()
 
-    elseif event == "DAMAGE_METER_SESSION_ENDED" then
-        local sessionID, sessionType = ...
-        MyDamageMeter:OnSessionEnded(sessionID, sessionType)
+    elseif event == "DAMAGE_METER_RESET" then
+        -- No payload — fires when sessions are reset
+        MyDamageMeter:OnReset()
     end
 end)
 ```
