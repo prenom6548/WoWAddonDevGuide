@@ -257,17 +257,27 @@ end
 
 ### C_RestrictedActions Namespace
 
-The `C_RestrictedActions` namespace provides information about what actions are currently restricted:
+The `C_RestrictedActions` namespace exposes addon-restriction state for the
+five categories tracked by the game: Combat, Encounter, ChallengeMode,
+PvPMatch, and Map (see `Enum.AddOnRestrictionType`). Use these to check
+whether a particular kind of restriction is currently active.
 
 ```lua
--- Check if a specific action is restricted
-if C_RestrictedActions.IsRestricted() then
-    -- General restriction check
+-- Check whether a specific restriction type is currently active
+if C_RestrictedActions.IsAddOnRestrictionActive(Enum.AddOnRestrictionType.Combat) then
+    -- Combat restrictions active
 end
 
--- Check specific restriction types
-if C_RestrictedActions.IsCombatRestricted() then
-    -- Combat-specific restrictions active
+if C_RestrictedActions.IsAddOnRestrictionActive(Enum.AddOnRestrictionType.Encounter) then
+    -- Player is in an active instance encounter
+end
+
+-- Get the full restriction state (not just a boolean)
+local state = C_RestrictedActions.GetAddOnRestrictionState(Enum.AddOnRestrictionType.ChallengeMode)
+
+-- For classic combat lockdown checks, use the global (not namespaced):
+if InCombatLockdown() then
+    -- Cannot modify secure frames right now
 end
 
 -- Safe pattern for restricted actions
