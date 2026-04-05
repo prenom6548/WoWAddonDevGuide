@@ -654,9 +654,9 @@ When a player is in ANY combat (not limited to instanced content), tainted addon
 ### Working with Secrets
 
 ```lua
--- String concatenation with secrets (12.0.0)
--- Use string.concat() which handles secrets properly
-local message = string.concat("Health: ", secretHealthValue)
+-- Display values that may be secret on FontStrings (12.0.0)
+-- SetFormattedText handles secrets at the C++ level
+myFontString:SetFormattedText("Health: %d", secretHealthValue)
 
 -- Scrub secrets before logging
 local health, power = scrubsecretvalues(UnitHealth("target"), UnitPower("target"))
@@ -748,14 +748,6 @@ tIndexOf(table, value)         -- Find index of value
 ### String Functions
 
 ```lua
--- 12.0.0+: Safe string concatenation (handles secrets)
-string.concat(...)
-    -- Concatenates strings, properly handling secret values
-    -- Returns: concatenated string
-
--- Example
-local msg = string.concat("Player: ", playerName, " has ", healthValue, " HP")
-
 -- Standard WoW string functions
 strsplit(delimiter, string)    -- Split string by delimiter
 strjoin(delimiter, ...)        -- Join strings with delimiter
