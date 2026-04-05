@@ -186,7 +186,7 @@ Per-computer saved variables (not synced between machines).
 ## SavedVariablesMachine: g_addonCategoriesCollapsed
 ```
 
-Variables are saved to `WTF/Config.wtf` area (machine-specific).
+Variables are saved to `WTF/SavedVariables/AddonName.lua` (at the WTF root, not under `Account/`) — each installation of the client has its own copy, so data does not sync across machines.
 
 **Example from Blizzard addons:**
 ```
