@@ -560,12 +560,19 @@ local CHANGELOG = {
 function MyAddon:ShowChangelog(fromVersion, toVersion)
     print(format("|cff00ff00%s updated from %s to %s|r", AddonName, fromVersion, toVersion))
 
-    for version, changes in pairs(CHANGELOG) do
+    -- Collect and sort matching versions (pairs order is undefined)
+    local versions = {}
+    for version in pairs(CHANGELOG) do
         if IsNewerVersion(version, fromVersion) and not IsNewerVersion(version, toVersion) then
-            print(format("|cffFFFF00Version %s:|r", version))
-            for _, change in ipairs(changes) do
-                print(format("  - %s", change))
-            end
+            versions[#versions + 1] = version
+        end
+    end
+    table.sort(versions, IsNewerVersion)
+
+    for _, version in ipairs(versions) do
+        print(format("|cffFFFF00Version %s:|r", version))
+        for _, change in ipairs(CHANGELOG[version]) do
+            print(format("  - %s", change))
         end
     end
 end
