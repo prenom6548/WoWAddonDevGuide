@@ -2557,6 +2557,8 @@ function MyAddon:UpdateHealthDisplay(units)
 end
 ```
 
+> **12.0.0+ Secret Values caveat.** `UnitHealth(unit)`, `UnitHealthMax(unit)`, and `UnitGetTotalAbsorbs(unit)` return SECRET values during combat (and in any tainted execution context). If `RefreshUnitFrame` uses those results for arithmetic, comparisons, or `string.format("%d", ...)`, it will error. For a plain health bar, use `UnitHealthPercent(unit, false, CurveConstants.ScaleTo100)` which returns a non-secret 0–100 percentage. For raw-value display paths, guard with `issecretvalue()` first. See [Secret Safe APIs](12a_Secret_Safe_APIs.md) for the full pattern.
+
 ### RegisterBucketMessage
 
 ```lua
