@@ -91,11 +91,12 @@ frame:SetScript("OnEvent", function(self, event, ...)
 end)
 ```
 
-#### Pattern 2: Event Registry Pattern
+#### Pattern 2: Custom Event Dispatcher
 ```lua
-local EventRegistry = {}
+-- NOTE: Do not name this "EventRegistry" — that shadows Blizzard's global EventRegistry.
+local MyEventDispatcher = {}
 
-function EventRegistry:RegisterEvent(event, callback)
+function MyEventDispatcher:RegisterEvent(event, callback)
     if not self.events then
         self.events = {}
     end
@@ -106,7 +107,7 @@ function EventRegistry:RegisterEvent(event, callback)
     table.insert(self.events[event], callback)
 end
 
-function EventRegistry:OnEvent(event, ...)
+function MyEventDispatcher:OnEvent(event, ...)
     if self.events and self.events[event] then
         for _, callback in ipairs(self.events[event]) do
             callback(...)
@@ -114,17 +115,17 @@ function EventRegistry:OnEvent(event, ...)
     end
 end
 
-EventRegistry.frame = CreateFrame("Frame")
-EventRegistry.frame:SetScript("OnEvent", function(self, event, ...)
-    EventRegistry:OnEvent(event, ...)
+MyEventDispatcher.frame = CreateFrame("Frame")
+MyEventDispatcher.frame:SetScript("OnEvent", function(self, event, ...)
+    MyEventDispatcher:OnEvent(event, ...)
 end)
 
 -- Usage
-EventRegistry:RegisterEvent("PLAYER_LOGIN", function()
+MyEventDispatcher:RegisterEvent("PLAYER_LOGIN", function()
     print("Login callback 1")
 end)
 
-EventRegistry:RegisterEvent("PLAYER_LOGIN", function()
+MyEventDispatcher:RegisterEvent("PLAYER_LOGIN", function()
     print("Login callback 2")
 end)
 ```
