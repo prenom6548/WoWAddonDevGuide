@@ -883,7 +883,19 @@ AceEvent uses a **single shared frame** (`AceEvent30Frame`) to register for all 
 
 **Use `frame:RegisterUnitEvent()` when** you need to filter events to specific units (e.g., only "player" and "target" for UNIT_HEALTH). AceEvent cannot do this.
 
-**Use EventRegistry when** you need callbacks for newer Blizzard systems that use EventRegistry instead of frame events (e.g., `EventRegistry:RegisterCallback("EditMode.Enter", ...)`).
+**Use EventRegistry when** you need callbacks for newer Blizzard systems that fire through EventRegistry rather than the frame event system (e.g., `EventRegistry:RegisterCallback("EditMode.Enter", ...)`), OR when you want to register for plain frame events without managing your own frame. The latter is the modern idiomatic pattern in 12.0.0+ core UI (used throughout `Blizzard_ActionBar`, `Blizzard_DamageMeter`, `Blizzard_CooldownViewer`, etc.):
+
+```lua
+-- Register a frame event and get a callback fired through EventRegistry.
+-- No user-supplied frame needed; EventRegistry owns its internal frame.
+EventRegistry:RegisterFrameEventAndCallback("PLAYER_REGEN_DISABLED", self.OnCombatStart, self)
+EventRegistry:RegisterFrameEventAndCallback("SPELLS_CHANGED", MyAddon.OnSpellsChanged, MyAddon)
+
+-- A plain anonymous callback (no owner) is also supported:
+EventRegistry:RegisterFrameEventAndCallback("PLAYER_ENTERING_WORLD", function()
+    -- handler body
+end)
+```
 
 ---
 
