@@ -555,7 +555,7 @@ The following directories contained outdated 11.x extracted data and were remove
 - ✅ [00_MASTER_PROMPT.md](00_MASTER_PROMPT.md) - Added reference to new migration guide
 
 **External Files Updated:**
-- ✅ `C:\Dev\++Claude AI++\prompts\update_wow_addon_dev_guide.md` - Updated prompt template
+- ✅ External prompt template updated
 
 ### What's New in 11_API_Migration_Guide.md
 
@@ -677,7 +677,7 @@ The new guide has been integrated into:
 - ✅ README.md directory structure
 - ✅ README.md Week 5+ curriculum
 - ✅ 00_MASTER_PROMPT.md reference list
-- ✅ C:\Dev\++Claude AI++\prompts\update_wow_addon_dev_guide.md
+- ✅ External prompt template updated
 
 ### Validation
 

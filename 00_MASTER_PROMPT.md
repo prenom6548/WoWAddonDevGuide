@@ -342,9 +342,9 @@ When asking Claude for addon development help, provide:
 
 ## Source Code Locations
 
-- **WoW UI Source**: `D:\Games\World of Warcraft\_retail_\Interface\+wow-ui-source+\` (version-specific subdirectory)
-- **Blizzard AddOns**: `.../+wow-ui-source+/Interface/AddOns/`
-- **Community AddOns**: `D:\Games\World of Warcraft\_retail_\Interface\AddOns\`
+- **WoW UI Source**: `<WoW Install>\Interface\+wow-ui-source+\` (version-specific subdirectory)
+- **Blizzard AddOns**: `<WoW Install>\+wow-ui-source+\Interface\AddOns\`
+- **Community AddOns**: `<WoW Install>\Interface\AddOns\`
 - **API Documentation**: `.../Blizzard_APIDocumentationGenerated/*.lua` (513+ files)
 
 <!-- CLAUDE_SKIP_START -->

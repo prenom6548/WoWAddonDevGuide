@@ -120,7 +120,7 @@ Many global functions have been removed. Use C_* namespaces:
 
 ### Step 1: Create Addon Folder
 ```
-D:\Games\World of Warcraft\_retail_\Interface\AddOns\MyFirstAddon\
+<WoW Install>\Interface\AddOns\MyFirstAddon\
 ```
 
 ### Step 2: Create TOC File
@@ -311,12 +311,12 @@ frame:Show();
 
 ### WoW UI Source
 ```
-D:\Games\World of Warcraft\_retail_\Interface\+wow-ui-source+ (11.2.7)\
+<WoW Install>\Interface\+wow-ui-source+ (<version>)\
 ```
 
 ### Your Addons
 ```
-D:\Games\World of Warcraft\_retail_\Interface\AddOns\
+<WoW Install>\Interface\AddOns\
 ```
 
 ### Saved Variables

@@ -881,7 +881,7 @@ externals:
 ### Common Library Locations in Addons
 
 ```
-D:\Games\World of Warcraft\_retail_\Interface\AddOns\
+<WoW Install>\Interface\AddOns\
 ├── Ace3\                           # Full Ace3 suite
 ├── SomeAddon\
 │   └── Libs\

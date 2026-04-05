@@ -1747,7 +1747,7 @@ Mark templates as virtual to prevent instantiation:
 | UI Panel Templates | `Blizzard_SharedXML\Mainline\SharedUIPanelTemplates.lua` |
 | Hybrid Scroll | `Blizzard_SharedXML\HybridScrollFrame.xml` |
 
-All paths relative to: `D:\Games\World of Warcraft\_retail_\Interface\+wow-ui-source+ (11.2.7)\Interface\AddOns\`
+All paths relative to: `Interface\AddOns\`
 
 ---
 

@@ -937,7 +937,7 @@ end
 
 All API documentation files are located at:
 ```
-D:\Games\World of Warcraft\_retail_\Interface\+wow-ui-source+ (12.0.0)\Interface\AddOns\Blizzard_APIDocumentationGenerated\
+<WoW Install>\Interface\+wow-ui-source+ (<version>)\Interface\AddOns\Blizzard_APIDocumentationGenerated\
 ```
 
 ## Using API Documentation Files
