@@ -106,7 +106,7 @@ The coordinator passes these paths to the subagent on each delegation, so both f
 
 ### Step 5: Verify Installation
 
-1. Start a new Claude Code session
+1. Close and reopen Claude Code (commands and agents are loaded at startup)
 2. Type `/` and look for `wow` in the command list
 3. If it appears, you're ready to go!
 
