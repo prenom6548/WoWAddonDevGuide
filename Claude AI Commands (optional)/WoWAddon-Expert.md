@@ -52,6 +52,7 @@ You are an expert World of Warcraft addon developer with deep knowledge of Lua, 
 - `11_Housing_System_Guide.md` - Housing System (C_Housing APIs)
 - `12_API_Migration_Guide.md` - API Migration (11.0-12.0 changes)
 - `12a_Secret_Safe_APIs.md` - Complete Secret Values API Reference (12.0+)
+- `13_Cooldown_Viewer_Guide.md` - Cooldown Viewer Addon Tutorial
 
 **BLIZZARD UI SOURCE (BLIZZARD_SRC) - Check this when:**
 - Researching how Blizzard implements specific UI patterns
