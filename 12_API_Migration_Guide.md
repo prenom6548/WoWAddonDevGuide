@@ -44,10 +44,12 @@ https://warcraft.wiki.gg/wiki/Patch_[VERSION]/API_changes
 ```
 
 **Examples:**
-- Patch 12.0.0: https://warcraft.wiki.gg/wiki/Patch_12.0.0/API_changes
-- Patch 11.0.0: https://warcraft.wiki.gg/wiki/Patch_11.0.0/API_changes
-- Patch 11.0.2: https://warcraft.wiki.gg/wiki/Patch_11.0.2/API_changes
-- Patch 10.2.5: https://warcraft.wiki.gg/wiki/Patch_10.2.5/API_changes
+- Patch 12.0.5: [Patch 12.0.5/API changes](https://warcraft.wiki.gg/wiki/Patch_12.0.5/API_changes)
+- Patch 12.0.1: [Patch 12.0.1/API changes](https://warcraft.wiki.gg/wiki/Patch_12.0.1/API_changes)
+- Patch 12.0.0: [Patch 12.0.0/API changes](https://warcraft.wiki.gg/wiki/Patch_12.0.0/API_changes)
+- Patch 11.0.0: [Patch 11.0.0/API changes](https://warcraft.wiki.gg/wiki/Patch_11.0.0/API_changes)
+- Patch 11.0.2: [Patch 11.0.2/API changes](https://warcraft.wiki.gg/wiki/Patch_11.0.2/API_changes)
+- Patch 10.2.5: [Patch 10.2.5/API changes](https://warcraft.wiki.gg/wiki/Patch_10.2.5/API_changes)
 
 **What You'll Find:**
 - New APIs added
@@ -80,7 +82,7 @@ Check popular addons' update notes for insights on what changed.
 
 | Expansion | Interface Version | Major API Changes |
 |-----------|------------------|-------------------|
-| **Midnight** | 12.0.0+ | Secret Values system, C_ActionBar, C_CombatLog, C_DamageMeter, 432 new APIs |
+| **Midnight** | 12.0.0 - 12.0.5 | Secret Values system, C_ActionBar, C_CombatLog, C_DamageMeter, 432 new APIs; 12.0.5 adds numeric formatters, per-plate hit rect, non-secret aura classification fields |
 | **The War Within** | 11.0.0 - 11.2.7 | UIDropDownMenu deprecated, GetSpellInfo removed, C_Spell changes, Housing system |
 | **Dragonflight** | 10.0.0 - 10.2.7 | UnitAura/UnitBuff/UnitDebuff deprecated, TextStatusBar changes |
 | **Shadowlands** | 9.0.0 - 9.2.7 | C_Container namespace, many containerAPIs moved |
@@ -92,13 +94,14 @@ Check popular addons' update notes for insights on what changed.
 Use these values in your `## Interface:` directive. Since **Patch 10.1.0**, you can use comma-separated values to support multiple versions in a single TOC file:
 
 ```
-## Interface: 120000, 110207, 50503, 40402, 11508
+## Interface: 120005, 110207, 50503, 40402, 11508
 ```
 
 | Game Client | Version | Interface Number |
 |-------------|---------|-----------------|
-| **Retail (Midnight)** | 12.0.0 | 120000 |
+| **Retail (Midnight)** | 12.0.5 (current) | 120005 |
 | **Retail (Midnight)** | 12.0.1 | 120001 |
+| **Retail (Midnight)** | 12.0.0 | 120000 |
 | **Retail (TWW)** | 11.2.7 | 110207 |
 | **Retail (TWW)** | 11.1.0 | 110100 |
 | **Classic Cata** | 4.4.2 | 40402 |
@@ -107,11 +110,13 @@ Use these values in your `## Interface:` directive. Since **Patch 10.1.0**, you 
 | **Classic SoD/Era** | 1.15.8 | 11508 |
 | **Wrath Classic** | 3.4.3 | 30403 |
 
+> **Note on Midnight patch numbering:** There is no 12.0.2, 12.0.3, or 12.0.4. Blizzard jumped directly from 12.0.1 to 12.0.5. The next patch after 12.0.5 is 12.0.7.
+
 **Comma-Separated Interface (10.1.0+):**
 - One TOC file can declare compatibility with multiple WoW versions
 - Use when your addon code is identical across versions
 - Eliminates need for separate `_Mainline.toc`, `_Classic.toc` files
-- Example: `## Interface: 120000, 40402, 11508` supports Retail + Cata Classic + Era
+- Example: `## Interface: 120005, 40402, 11508` supports Retail + Cata Classic + Era
 
 **When to use multiple TOC files instead:**
 - Different Lua/XML files need to load per version
@@ -251,6 +256,33 @@ C_NamePlateManager.SetNamePlateHitTestFrame(frame)
 ```
 
 However, this API may be restricted to Blizzard code only. Testing indicates it may not work for third-party addons. The `SetAlpha(0)` approach is the reliable solution.
+
+**Addon-usable hit-rect override (12.0.5+):**
+
+Patch 12.0.5 added a proper addon-usable API for overriding nameplate hit-rect offsets. These methods live directly on the nameplate frame (documented as `FrameAPINamePlate` in the generated API docs):
+
+```lua
+-- Check if your code is permitted to change hit-test points right now.
+-- Returns false during combat for tainted code, except on the tick a unit
+-- is first assigned or when untainted code updates hit-test points on the
+-- same tick.
+if nameplate:CanChangeHitTestPoints() then
+    -- Option 1: Fill the hit-test area from an existing region
+    nameplate:SetAllHitTestPoints(myVisualFrame)
+
+    -- Option 2: Fine-grained anchor list
+    nameplate:SetHitTestPoints({
+        { point = "TOPLEFT",     relativeTo = myVisualFrame, relativePoint = "TOPLEFT",     x = 0, y = 0 },
+        { point = "BOTTOMRIGHT", relativeTo = myVisualFrame, relativePoint = "BOTTOMRIGHT", x = 0, y = 0 },
+    })
+
+    -- Inspect / clear:
+    local anchors = nameplate:GetHitTestPoints()
+    nameplate:ClearAllHitTestPoints()
+end
+```
+
+This is the preferred way to match the nameplate hit rect to a custom-themed plate in 12.0.5+ — it avoids the global-width side-effects of `C_NamePlate.SetNamePlateSize()` (which still affects ALL plates) and does not steal clicks from adjacent plates the way an oversized global hit box does. For older clients, fall back to the `SetAlpha(0)` + global `SetNamePlateSize` pattern described above.
 
 **Migration Checklist for Nameplate Addons:**
 
@@ -1677,7 +1709,7 @@ Minor refinements to 12.0.0 systems:
 GetActionCooldownRemainingPercent()  -- REMOVED, use GetActionCooldown() math
 ```
 
-> **Note (12.0.1):** Doing arithmetic on secret `startTime`/`duration` values from `GetActionCooldown()` will fail in tainted contexts. Use duration objects via `C_Spell.GetSpellCooldownDuration()` or `C_LossOfControl.GetActiveLossOfControlDuration()` instead.
+> **Note (12.0.1+, still applies in 12.0.5):** Doing arithmetic on secret `startTime`/`duration` values from `GetActionCooldown()` will fail in tainted contexts. Use duration objects via `C_Spell.GetSpellCooldownDuration()` or `C_LossOfControl.GetActiveLossOfControlDuration()` instead. 12.0.5 adds `Cooldown:SetCountdownFormatter()` and the new `AbbreviatedNumberFormatter`/`SecondsFormatter`/`NumericRuleFormatter` types, which accept secret numbers directly for rendering.
 
 **Restored APIs:**
 ```lua
@@ -1861,6 +1893,156 @@ Set up private aura anchors during `PLAYER_ENTERING_WORLD` or `ADDON_LOADED`, no
 **Macro Restrictions:**
 - `/wm` and `/cwm` (whisper macros) rate-limited to **3 per second**
 - Macros can **no longer send BNet whispers while an encounter is active**
+
+---
+
+#### Patch 12.0.5 (TOC 120005)
+
+Patch 12.0.5 is a mid-Midnight content patch that adds targeted addon APIs — mostly aimed at making secret-value workarounds less awkward — while tightening a handful of unit/identity-related lookups. The next patch is 12.0.7 (there was no 12.0.2/3/4/6). See the full changelog at [Patch 12.0.5/API changes](https://warcraft.wiki.gg/wiki/Patch_12.0.5/API_changes).
+
+**New Numeric Formatters for Secret Values:**
+
+12.0.5 introduces three new Lua formatter object types that accept secret numbers via their `Format` functions on duration objects:
+
+- `AbbreviatedNumberFormatter` — human-readable abbreviations (e.g., "1.2M")
+- `NumericRuleFormatter` — pluralization rules, locale-aware number formatting
+- `SecondsFormatter` — duration/time formatting
+
+These formatters can be plugged directly into Cooldown frames to render secret durations without `pcall(string.format)` workarounds:
+
+```lua
+-- NEW in 12.0.5: Set a formatter to control how the cooldown frame renders its countdown text.
+-- Pass nil to clear.
+cooldown:SetCountdownFormatter(myFormatter)
+
+-- NEW in 12.0.5: Below this threshold (in seconds), numbers render with one
+-- decimal (e.g., "6.7") instead of integer seconds.
+cooldown:SetCountdownMillisecondsThreshold(10)
+```
+
+This supplements `SetCooldownFromDurationObject` as the addon-side path for secret-safe cooldown rendering.
+
+**New `ignoreGCD` Parameter on Charge-Duration APIs:**
+
+Charge-duration-constructing APIs now accept an `ignoreGCD` boolean so addons can compute charge cooldown state without the global cooldown contaminating the result:
+
+- `C_SpellBook.GetSpellBookItemChargeDuration(spellBookItemSlotIndex, spellBookItemType, ignoreGCD)`
+- `C_Spell.GetSpellChargeDuration(spellID, ignoreGCD)`
+- `C_ActionBar.GetActionChargeDuration(slot, ignoreGCD)`
+
+**Zero-Span Duration Semantics:**
+
+The charge-duration APIs above now return a **zero-span duration object** when the spell/action is at maximum charges (previously this was sometimes an unusable nil or live-counting duration). Zero-span durations are also treated as **fully elapsed** by the cooldown / duration object framework, so UI code can rely on the consistent "nothing to count down" case.
+
+**Aura Data — Classification Fields Now Non-Secret:**
+
+The following `AuraData` boolean fields are no longer secret and CAN be used in Lua during combat:
+
+- `isHelpful`, `isHarmful` — buff vs. debuff
+- `isRaid` — raid-applicable
+- `isNameplateOnly` — nameplate-visibility-only aura
+- `isFromPlayerOrPlayerPet` — source proximity
+
+The identifier fields (`spellId`, `name`, `icon`, duration numerics) remain secret during combat.
+
+Additionally, `SecureAuraHeaderTemplate` now sorts **permanent auras after long-duration auras** (previous behavior grouped them differently, which could reorder icons mid-encounter).
+
+**Aura Instance ID Re-Randomization:**
+
+`auraInstanceID` values are now re-randomized when entering encounters, Mythic+, and PvP. Do NOT assume instance IDs persist across encounter boundaries — reset any instance-id-keyed cache on `ENCOUNTER_START`, `CHALLENGE_MODE_START`, and arena/battleground boundary events.
+
+**Unit Identity / Secret Token Restrictions:**
+
+Several `Unit*` APIs became stricter about secret unit identities. Patterns that "worked" by coincidence in 12.0.1 may now return `nil`:
+
+- `UnitName(unit)` — **no longer accepts secret unit tokens**.
+- `UnitSpellTargetName(unit)` — now only returns names for player units.
+- `UnitTokenFromGUID(guid)` — will no longer return `arena*`, `nameplate*`, `boss*`, `party*`, `raid*`, or `targettarget`/`focustarget` tokens when identities are secret.
+- `UnitIsUnit(unitA, unitB)` — **major rewrite**:
+  - Returns a secret value if either argument is `targettarget` or `focustarget`.
+  - Returns `nil` if the comparison between the two input tokens is forbidden.
+  - Comparison is **allowed** if either unit is one of: `player`, `pet`, `vehicle`, `mouseover`, `target`, `softenemy`, `softfriend`, `softinteract`, `focus`, `none`, `npc`, `questnpc`.
+  - Comparison is **allowed** if one unit is a party/raid token (or its pet) AND the other is NOT a compound token, nameplate token, `targettarget`, or `focustarget`.
+  - **All other comparisons now return nil.**
+- `UnitTokenFromGUID` / related "nameplate" token APIs — no longer accept party, raid, or target-of-target tokens.
+
+Practical impact: code like `UnitIsUnit("targettarget", "player")` to detect a mob targeting you may now fail with `nil` or a secret. Where possible, prefer unit events (`UNIT_TARGET`, `UNIT_THREAT_LIST_UPDATE`) or the `softenemy`/`softfriend` tokens.
+
+**Player Stat APIs:**
+
+APIs returning player stats now return **secret values if auras are secret**. In 12.0.1 these were unconditionally non-secret; in 12.0.5 they inherit secrecy from the aura state that influenced them.
+
+**New `table.freeze` / `table.isfrozen`:**
+
+```lua
+-- Make a table read-only:
+local config = table.freeze({ foo = 1, bar = 2 })
+-- config.foo = 5  -- raises an error
+
+-- Inspect:
+if table.isfrozen(config) then ... end
+```
+
+Useful for shipping immutable constant tables to other addons or for catching accidental mutation of shared config.
+
+**New Predicates Table in API Documentation:**
+
+Blizzard added a `Predicates` table to the generated Lua API documentation describing per-API restrictions (what can be called with secret arguments, what is combat-restricted, etc.). Worth browsing if you're unsure whether an API accepts secrets — this is the authoritative source going forward.
+
+**Ambiguate Now Accepts Secrets:**
+
+`Ambiguate(name, context)` now accepts secret string arguments from addons. Previously this was a minor friction point when processing names returned by some combat/secret APIs.
+
+**String Format — Field Width Modifiers Still Restricted on Secrets:**
+
+Restating the 12.0.1 rule explicitly: string formatting APIs do NOT apply field-width / precision modifiers (e.g., `%.5s`, `%10s`) to secret strings. `%s` without a modifier continues to work for display via `SetFormattedText` at the C++ level.
+
+**FontString Smooth Scaling:**
+
+```lua
+-- NEW in 12.0.5: control per-FontString smooth scaling for HiDPI-friendly text.
+local isSmooth = fontString:GetSmoothScaling()
+fontString:SetSmoothScaling(true)
+```
+
+**Execution Throttle Exceptions:**
+
+Addon execution throttles no longer apply during:
+- `PLAYER_LOGOUT`
+- `ADDONS_UNLOADING`
+
+Addons can do cleanup (saved-variable finalization, async flushes) at logout without hitting the CPU budget that applies during normal play. Don't abuse this — it's not a free pass during gameplay.
+
+**UNIT_CONNECTION Fix:**
+
+Fixed a bug where `UNIT_CONNECTION` did not always fire correctly when a party member connected or disconnected. Addons that track party online state via this event should now receive it reliably — remove any `C_Timer`-based polling workarounds that were compensating.
+
+**Transmog — Restricted Environment Support:**
+
+- `GetTransmogOutfitIndex` is now available in the restricted addon environment (usable with the `/outfit` slash command).
+- A new `"outfit"` action type is available for `SecureActionButtonTemplate`, letting secure buttons apply a transmog outfit:
+
+```lua
+local btn = CreateFrame("Button", "MyOutfitButton", UIParent, "SecureActionButtonTemplate")
+btn:SetAttribute("type", "outfit")
+btn:SetAttribute("outfit", outfitNameOrID)
+```
+
+**Misc Fixes:**
+
+- `GetRaidRosterInfo(index)` now returns the string `"Unknown"` instead of `nil` when a member's name is not yet cached. Addons that gate on `name ~= nil` may need to also gate on `name ~= "Unknown"`.
+- Fixed an issue where `IsInInstance()` did not always return `true` inside some instances (mostly delves).
+
+**New API Documentation Modules (12.0.5+):**
+
+Addons researching unfamiliar APIs can reference these new generated documentation files in `Interface\AddOns\Blizzard_APIDocumentationGenerated\`:
+
+- `AbbreviatedNumberFormatterAPIDocumentation.lua`, `NumericFormatterAPIDocumentation.lua`, `NumericRuleFormatterAPIDocumentation.lua`, `SecondsFormatterAPIDocumentation.lua` — new formatter types
+- `FrameAPINamePlateDocumentation.lua` — per-nameplate hit-test point APIs (`SetHitTestPoints`, `SetAllHitTestPoints`, `CanChangeHitTestPoints`, `ClearAllHitTestPoints`, `GetHitTestPoints`, `SetStackingBoundsFrame`)
+- `CooldownFrameConstantsDocumentation.lua` — cooldown constant definitions
+- `EncounterEventsDocumentation.lua`, `EncounterEventsSharedDocumentation.lua` — encounter event namespace (also exposes `C_EncounterEvents.GetEventInfo`, etc.)
+- `SecretWrapperConstantsDocumentation.lua` — secret-value constants
+- `TalentConstantsDocumentation.lua` — talent constant definitions
 
 ---
 
@@ -2690,6 +2872,10 @@ local isWW_11_1_5 = (tocVersion >= 110105)  -- C_EncodingUtil, table.count
 local isWW_11_2_0 = (tocVersion >= 110200)  -- Reagent Bank removed
 local isWW_11_2_5 = (tocVersion >= 110205)  -- C_ItemSocketInfo
 local isWW_11_2_7 = (tocVersion >= 110207)  -- Housing system
+
+-- Patch-level detection for Midnight
+local isMid_12_0_1 = (tocVersion >= 120001)  -- Cooldown duration objects, secret format precision
+local isMid_12_0_5 = (tocVersion >= 120005)  -- Formatters, per-plate hit rect, aura classification fields
 ```
 
 ### Build Number Gating for Mid-Patch Changes
@@ -2921,6 +3107,30 @@ IsEncounterInProgress\(
 /run if C_CombatLog then print("Entries:", C_CombatLog.GetNumEntries()) end
 ```
 
+### 12.0.5+ Specific Testing Commands
+
+```lua
+-- Check TOC version for 12.0.5+
+/run print("12.0.5+:", select(4, GetBuildInfo()) >= 120005)
+
+-- Test new numeric formatter types (12.0.5+)
+/run print("AbbreviatedNumberFormatter:", AbbreviatedNumberFormatter ~= nil)
+/run print("NumericRuleFormatter:", NumericRuleFormatter ~= nil)
+/run print("SecondsFormatter:", SecondsFormatter ~= nil)
+
+-- Test new Cooldown methods (12.0.5+)
+/run local cd = CreateFrame("Cooldown", nil, UIParent, "CooldownFrameTemplate"); print("SetCountdownFormatter:", cd.SetCountdownFormatter ~= nil); print("SetCountdownMillisecondsThreshold:", cd.SetCountdownMillisecondsThreshold ~= nil)
+
+-- Test table.freeze / table.isfrozen (12.0.5+)
+/run local t = table.freeze and table.freeze({}); print("frozen:", table.isfrozen and table.isfrozen(t))
+
+-- Check new nameplate hit-test API availability on a plate
+/run for _, np in ipairs(C_NamePlate.GetNamePlates()) do print("CanChangeHitTestPoints:", np.CanChangeHitTestPoints ~= nil); break end
+
+-- Verify aura classification fields non-secret (12.0.5+)
+/run local a = C_UnitAuras.GetAuraDataByIndex("player", 1, "HELPFUL"); if a then print("isHelpful:", tostring(a.isHelpful), "secret?", issecretvalue and issecretvalue(a.isHelpful) or "n/a") end
+```
+
 ### 11.1.5+ Specific Testing (C_EncodingUtil)
 
 ```lua
@@ -3052,13 +3262,15 @@ if auraData then
 end
 ```
 
-**CRITICAL 12.0.0 Limitation:** In 12.0.0+, ALL aura data fields are **SECRET** during combat except `auraInstanceID`. This means:
+**CRITICAL 12.0.0 Limitation:** In 12.0.0+, most aura data fields are **SECRET** during combat except `auraInstanceID`. This means:
 - `auraData.name`, `auraData.spellId`, `auraData.icon`, `auraData.duration`, etc. cannot be used in Lua comparisons, arithmetic, or string operations during combat
 - `C_UnitAuras.GetUnitAuraBySpellID()` returns **nil** during combat
 - `C_UnitAuras.GetAuraDataBySpellName()` returns **nil** during combat
 - `AuraUtil.FindAuraByName()` returns **nil** during combat
 - Pre-combat caching does NOT work because new auras applied during combat have new auraInstanceIDs with secret spellId values
 - API-level filter strings (`HELPFUL|PLAYER`, `INCLUDE_NAME_PLATE_ONLY|HARMFUL`) still work because they are processed at the C++ level
+
+> **12.0.5 Update — Classification Fields Now Non-Secret:** As of Patch 12.0.5, the following `AuraData` boolean fields are no longer secret and CAN be read from tainted code during combat: `isHelpful`, `isHarmful`, `isRaid`, `isNameplateOnly`, `isFromPlayerOrPlayerPet`. This allows addons to do Lua-side classification filtering (e.g., "is this my aura?", "is this a nameplate-only aura?") on results from `C_UnitAuras.GetAuraDataByIndex`/`GetAuraDataByAuraInstanceID` without needing a new API call with a filter string. The identifying fields (`spellId`, `name`, `icon`, duration-related numerics) remain secret during combat. Also: aura `auraInstanceID` values now re-randomize when entering encounters, M+, and PvP — do not assume instance IDs persist across encounter boundaries.
 
 > **See [12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md#aura-data-secret-values-120---critical) for comprehensive aura secret values documentation.**
 
@@ -3419,6 +3631,11 @@ eventFrame:RegisterEvent("DAMAGE_METER_COMBAT_SESSION_UPDATED")
 | `GetFunctionCPUUsage(func)` | `C_AddOnProfiler.MeasureCall(func, ...)` | 12.0.0 | Removed; profiler always enabled |
 | `UpdateAddOnCPUUsage()` | *(removed, not needed)* | 12.0.0 | C_AddOnProfiler auto-tracks |
 | `GetAddOnCPUUsage(addon)` | `C_AddOnProfiler.GetAddOnMetric(addon, metric)` | 12.0.0 | Use Enum.AddOnProfilerMetric |
+| `pcall(string.format, "%.0f", secret)` (1st try) | `cooldown:SetCountdownFormatter(AbbreviatedNumberFormatter)` | 12.0.5 | Formatters accept secrets natively |
+| `C_NamePlate.SetNamePlateSize(w, h)` (global) | `nameplate:SetHitTestPoints({...})` or `:SetAllHitTestPoints(region)` | 12.0.5 | Per-plate hit rect override (12.0.5+) |
+| (no 12.0.0 equivalent) | `table.freeze(t)` / `table.isfrozen(t)` | 12.0.5 | Read-only table support |
+| `pcall()`-guarded `aura.isHelpful`/`isHarmful` | Direct field access | 12.0.5 | These fields no longer secret |
+| `type="macro"` outfit macro for button | `type="outfit"` on `SecureActionButtonTemplate` | 12.0.5 | Native outfit action type |
 
 ---
 
