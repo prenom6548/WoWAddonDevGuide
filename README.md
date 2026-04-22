@@ -403,3 +403,118 @@ All examples in this knowledge base reference:
 - [Wago.io](https://addons.wago.io/) — addon/WeakAuras hosting.
 
 <!-- CLAUDE_SKIP_END -->
+
+<!-- CLAUDE_SKIP_START -->
+## Version History
+
+- **v3.3 (2026-04-22)**
+
+  - WoW 12.0.5 (Midnight patch 2) migration coverage propagated across the entire KB (TOC bumped to 120005)
+  - [12_API_Migration_Guide.md](12_API_Migration_Guide.md) gained a "Patch 12.0.5 (TOC 120005)" subsection, version-number table update, `isMid_12_0_1`/`isMid_12_0_5` detection helpers, six new migration quick-reference rows, and forward cross-links from 12.0.0 cooldown-arithmetic notes to the 12.0.5 formatters
+  - Documented 12.0.5 additions: numeric formatters that accept secret numbers natively (`AbbreviatedNumberFormatter`, `NumericRuleFormatter`, `SecondsFormatter`), `Cooldown:SetCountdownFormatter` / `SetCountdownMillisecondsThreshold`, per-plate nameplate hit-rect override API (`SetHitTestPoints` family replacing the global `C_NamePlate.SetNamePlateSize` trick), aura classification fields becoming non-secret (`isHelpful`, `isHarmful`, `isRaid`, `isNameplateOnly`, `isFromPlayerOrPlayerPet`), stricter unit-identity rules on `UnitName` / `UnitSpellTargetName` / `UnitTokenFromGUID` / `UnitIsUnit`, `table.freeze` / `table.isfrozen` read-only tables, the new `"outfit"` `SecureActionButtonTemplate` action type, and reliability fixes (`UNIT_CONNECTION`, `IsInInstance` inside delves, `GetRaidRosterInfo` "Unknown" sentinel)
+  - Added a dedicated Nameplates chapter to [03_UI_Framework.md](03_UI_Framework.md) covering unit tokens, plate lookup, click-targeting rules (12.0.0+), per-plate hit-rect API (12.0.5+), and nameplate-specific secret-value caveats
+  - Verified against `warcraft.wiki.gg/wiki/Patch_12.0.5/API_changes` and the `+wow-ui-source+ (12.0.5)` tree (FrameAPINamePlateDocumentation, AbbreviatedNumberFormatterAPIDocumentation, NumericRuleFormatterAPIDocumentation, SecondsFormatterAPIDocumentation, FrameAPICooldownDocumentation, and others)
+
+- **v3.2 (2026-04-05)**
+
+  - Executed a 40-item audit against `Blizzard_APIDocumentationGenerated/*.lua`, the wow-ui-source tree, warcraft.wiki.gg, and real-world addons (Broker_WorldQuests, ArkInventory, HandyNotes/HereBeDragons-Pins-2.0)
+  - Removed ~9 fabricated APIs: `GetActionInfo()` migration never happened (global still live); `C_ActionBar.PickupAction` / `PlaceAction` / `GetCurrentPage` don't exist; `C_RestrictedActions` namespace fabrications (IsActionRestricted, GetRestrictionReason, CanPerformAction, IsSecureContext, IsInCombatLockdown, IsRestricted, IsCombatRestricted); `string.concat`; `child.Cooldown:GetDurationObject()`; `child:SetAlphaFromCurve()`; `GetActionCount`/`ActionHasRange` renamed (not same-name) to `GetActionUseCount`/`HasRangeRequirements`
+  - Corrected `scrubsecretvalues` as varargs-in/varargs-out, global `GetSpellCooldown` removed in 11.0.0, `UnitHealth`/`UnitHealthMax` `%d` format crashes in combat, `C_RestrictedActions.IsAddOnRestrictionActive()` requires the `type` argument, `CooldownFrame_Set` / `CooldownFrame_SetDisplayAsPercentage` inherit `SetCooldown` restrictions
+  - Documentation accuracy fixes: Blizzard mixins use PascalCase universally (verified 123 PascalCase + 0 lowercase in `ActionButton.lua`); `_Intrinsic` is a method suffix not mixin suffix; `tinsert`/`tremove`/`wipe` are WoW global aliases; `C_EventUtils.IsEventValid` promoted as primary version-safe registration; `SavedVariablesMachine` storage path corrected to `WTF/SavedVariables/AddonName.lua`; 12.0.1 marked as current live patch
+  - Reground GameTooltip taint workaround scope (plain tooltips don't need `ItemTooltip:Hide()`, only helpers that touch `EmbeddedItemTooltip`); repositioned private tooltips as scanning-primary not a "definitive taint fix"; corrected map canvas taint rules (standard pin pattern is NOT inherently tainting; real taint is from quest-tracking API calls in click handlers)
+  - README External Links refreshed (warcraft.wiki.gg replaces stale Fandom mirror; added Gethe/wow-ui-source, verified WoWUIDev Discord, CurseForge, Wago, WoWInterface); Learning Path surfaces `12a_Secret_Safe_APIs.md` in Week 1 and `09a_Ace3_Library_Guide.md` in Week 4; end-to-end QUICK_START_GUIDE audit
+
+- **v3.1 (2026-04-03)**
+
+  - Updated [13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md) with 10 additions from CooldownManagerCentered analysis: viewer frame accessible properties (`isHorizontal`, `iconDirection`, `iconLimit`, `iconScale`, `childXPadding`, `childYPadding`, `visibleSetting`, `settingMap`, `IsInitialized()`), child frame properties (`cooldownID`, `layoutIndex`, `wasSetFromAura`, `cooldownChargesShown`, `cooldownShowSwipe`, `CooldownFlash`, `GetCooldownInfo()`, `GetBaseSpellID()`), `SetAlphaFromBoolean` for secret boolean→alpha mapping, `MENU_COOLDOWN_SETTINGS_ITEM` context menu hook, `CooldownViewerSettings:ShowUIPanel(false)`, EventRegistry argument column, `C_AssistedCombat` integration for rotation highlighting, `C_CurveUtil`-based dimming, charge-detection gap documentation, and nuanced child-hook taint warning (CDM hooks child methods successfully via `hooksecurefunc` with TaintLess)
+
+- **v3.0 (2026-04-03)**
+
+  - Created [09a_Ace3_Library_Guide.md](09a_Ace3_Library_Guide.md) — a dedicated 3,994-line Ace3 framework reference covering all 14+ libraries (AceAddon, AceDB, AceDBOptions, AceEvent, AceConsole, AceTimer, AceHook, AceConfig, AceConfigDialog, AceGUI, AceComm, AceSerializer, AceBucket, AceLocale) with full API docs, a complete GoldTracker example addon, troubleshooting, and an Ace3-vs-base API comparison table
+  - Audited all guides for Ace3 contamination and replaced 30+ Ace3-specific APIs (OnInitialize, self:RegisterEvent, AceDB, AceConfig, etc.) that had been incorrectly presented as base WoW API — replaced with native equivalents or clear Ace3 labeling with cross-references; most-touched files were [04_Addon_Structure.md](04_Addon_Structure.md), [08_Community_Addon_Patterns.md](08_Community_Addon_Patterns.md), [10_Advanced_Techniques.md](10_Advanced_Techniques.md)
+  - Removed ~320 lines of detailed Ace3 content from [09_Addon_Libraries_Guide.md](09_Addon_Libraries_Guide.md) (now in 09a) and replaced with a brief overview + cross-reference
+  - Converted ~140 backtick code-span guide references to clickable markdown hyperlinks across every KB file
+  - Fixed two filename typos: `11_API_Migration_Guide.md` → `12_API_Migration_Guide.md`, `12_Housing_System_Guide.md` → `11_Housing_System_Guide.md`
+
+- **v2.9 (2026-04-03)**
+
+  - Added [13_Cooldown_Viewer_Guide.md](13_Cooldown_Viewer_Guide.md) — comprehensive 18-section reference for the Cooldown Viewer (Cooldown Manager) system introduced in 12.0.0: C_CooldownViewer API, enums (CooldownViewerAlertType, CooldownViewerCategoryType, CooldownViewerLayoutType), mixin hierarchy (CooldownViewerMixin, CooldownViewerSpellMixin, etc.), spell ID resolution pipeline, cooldown/aura tracking internals, alert system (sound / visual glow / TTS), layout serialization, settings UI, CooldownFrame widget API, and addon integration patterns
+
+- **v2.8 (2026-03-25)**
+
+  - Corrected the previous "C_DamageMeter is unusable by addons / third-party damage meters CANNOT function in 12.0.0+" framing — Recount's successful 12.0.1 update demonstrated viable workarounds
+  - Documented four techniques in [12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md): `pcall(string.format, "%.0f", secret)` extracts secret numbers as displayable text at C++ level; `StatusBar:SetValue(secret)` and `SetMinMaxValues()` accept secrets at C++ level; array index from `combatSources` preserves sort order (index 1 = highest); after `PLAYER_REGEN_ENABLED` + delay all values become non-secret and fully readable
+  - `isLocalPlayer` and `classFilename` always accessible even during combat
+  - Supersedes the v2.2 "CANNOT function" conclusion across [00_MASTER_PROMPT.md](00_MASTER_PROMPT.md), [QUICK_START_GUIDE.md](QUICK_START_GUIDE.md), [08_Community_Addon_Patterns.md](08_Community_Addon_Patterns.md), [12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md)
+
+- **v2.7 (2026-03-08)**
+
+  - Documented map canvas taint propagation (12.0.0+): addon frames on `WorldMapFrame:GetCanvas()` with global names or `EnableMouse(true)` propagate taint through C++ hit-testing, causing "secret number value" errors in Blizzard tooltip code — use nil names, disable mouse on overlay frames, prefer Blizzard's pin system
+  - Clarified that secret values appear in ANY tainted execution context, not just during `InCombatLockdown()` — map canvas taint is a concrete example of this occurring outside combat
+  - Documented quest reward data loading: `HaveQuestData()` only guarantees basic quest info; `GetNumQuestLogRewards()` transiently returns 0 during `QUEST_LOG_UPDATE`; cache known-good reward data to prevent display regression
+  - `C_TaskQuest.GetQuestsOnMap()` returns quests from parent AND child sub-zone maps with child quest mapIDs remapped to parent — use `C_TaskQuest.GetQuestZoneID()` for canonical zone
+  - `hooksecurefunc` on FlightMapFrame methods taints the pin pipeline (SetPassThroughButtons ADDON_ACTION_BLOCKED errors); writing ANY property to GameTooltip from addon code taints that property permanently for the session
+
+- **v2.6 (2026-02-05)**
+
+  - Documented that ALL aura data fields are SECRET during combat except `auraInstanceID` (name, spellId, icon, duration, expirationTime, sourceUnit, dispelName, isHarmful, isHelpful, isFromPlayerOrPlayerPet, applications, timeMod, points) — applies to ALL combat contexts including open world, dungeons, raids, M+, PvP
+  - Every aura query method affected: `C_UnitAuras.GetUnitAuras`, `GetAuraDataByAuraInstanceID`, `GetUnitAuraBySpellID`, `GetAuraDataBySpellName`, `AuraUtil.FindAuraByName`, and `UNIT_AURA` event `addedAuras` payload
+  - Pre-combat caching does NOT work — new auras get new auraInstanceIDs with secret spellId values, and there is no non-secret window during combat
+  - `C_Spell.GetSpellInfo("SpellName")` returns nil in 12.0.0 — only numeric spell IDs accepted
+  - API-level filter strings still work (`HELPFUL|PLAYER`, `INCLUDE_NAME_PLATE_ONLY|HARMFUL`) because filtering is done at the C++ level
+  - **Note:** The `isHelpful` / `isHarmful` / `isRaid` / `isNameplateOnly` / `isFromPlayerOrPlayerPet` classification fields became non-secret in 12.0.5 — see v3.3
+
+- **v2.5 (2026-01-28)**
+
+  - Created [12a_Secret_Safe_APIs.md](12a_Secret_Safe_APIs.md) — a 1000+ line comprehensive reference for 12.0.0's secret values system, the biggest API change in WoW addon history
+  - Documented core detection functions (`issecretvalue`, `canaccessvalue`, `canaccessallvalues`, `hasanysecretvalues`, `canaccesssecrets`, `canaccesstable`, `issecrettable`), manipulation functions (`scrubsecretvalues`, `scrub`, `mapvalues`, `secretwrap`, `secretunwrap`, `dropsecretaccess`), secure execution functions (`securecallfunction`, `secureexecuterange`, `forceinsecure`), table security system (`SetTableSecurityOption`, `TableSecurityOption.*`), and SecureTypes containers (`CreateSecureMap`, `CreateSecureArray`, `CreateSecureStack`, `CreateSecureValue`, `CreateSecureNumber`, `CreateSecureBoolean`, `CreateSecureFunction`)
+  - Researched against Platynator addon, 50+ Blizzard UI source files using secret-safe patterns (RestrictedInfrastructure.lua, SecureTypes.lua, Pools.lua, Dump.lua, AuraUtil.lua, CallbackRegistry.lua), and the official FrameScriptDocumentation.lua
+  - Includes check-before-use / defer-to-out-of-combat / native StatusBar / percentage-based custom bar patterns, CVar-based testing helpers, and migration checklists
+
+- **v2.4 (2026-01-24)**
+
+  - Documented the correct way to programmatically close the Blizzard Settings panel from addon code: `if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end`
+  - `Settings.CloseUI()` does not exist; `SettingsPanel:Close()` triggers `ADDON_ACTION_BLOCKED` (it calls `Commit()` → `SaveBindings()`, a protected function)
+  - Common need for addons redirecting from the Blizzard Interface Options to standalone AceConfig-style dialogs
+
+- **v2.3 (2026-01-24)**
+
+  - Documented 12.0.0's nameplate click-targeting change: click detection moved from Lua-level frame handling to C++ level via a `HitTestFrame` child of the nameplate's UnitFrame
+  - `UnitFrame:Hide()` also hides the HitTestFrame child, breaking click targeting — use `SetAlpha(0)` instead to keep clicks alive while making the Blizzard plate invisible
+  - New `C_NamePlateManager.SetNamePlateHitTestFrame(frame)` exists but may be restricted to Blizzard code
+  - Affects TidyPlates, NeatPlates, Plater, KuiNameplates, and any addon replacing or modifying nameplates — discovered during real-world NeatPlates 12.0.0 testing
+
+- **v2.2 (2026-01-22)**
+
+  - Discovered through Recount testing that C_DamageMeter API data is "secret value"-protected: `source.name`, `source.totalAmount`, `source.amountPerSecond`, `source.sourceGUID` all secret; only `classFilename`, `isLocalPlayer`, `specIconID` accessible during combat
+  - Original conclusion ("third-party damage meters CANNOT function in 12.0.0+ / there is NO workaround") was **superseded by v2.8** — multiple workarounds proven viable
+
+- **v2.1 (2026-01-22)**
+
+  - Corrected a critical error in [12_API_Migration_Guide.md](12_API_Migration_Guide.md): combat log events are COMPLETELY BLOCKED for third-party addons in 12.0.0
+  - `Frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")` throws `ADDON_ACTION_FORBIDDEN` — event registration itself is blocked, not just the API calls
+  - Applies to all registration methods: `frame:RegisterEvent()`, `EventRegistry:RegisterFrameEventAndCallback()`, `RegisterEventCallback()` — `pcall()` does NOT prevent the error
+  - Traditional damage meters (Recount, Skada, Details!) require complete architectural rewrites to use `C_DamageMeter` with secret-value workarounds
+
+- **v2.0 (2026-01-20)**
+
+  - Major update for WoW 12.0.0 (Midnight) — the largest API overhaul in WoW history: 432+ new APIs, 140+ removed APIs, and the introduction of the Secret Values security system
+  - Added [11_Housing_System_Guide.md](11_Housing_System_Guide.md) (~1,766 lines) covering the complete `C_Housing` player housing system (287+ new functions)
+  - Updated all 13 existing guides for 12.0.0 compatibility — new namespaces (`C_ActionBar`, `C_CombatLog`, `C_EncodingUtil`), Secret Values warnings, callback-based event registration, Lua extensions (`table.create`, `table.count`), new TOC directives (`Category`, `Group`, `LoadSavedVariablesFirst`, `AllowAddOnTableAccess`)
+  - Documented breaking changes: global action bar and combat log functions REMOVED; Transmog APIs redesigned; Void Storage and Reagent Bank REMOVED (11.2.0); Socket APIs moved (11.2.5); `UnitAura` finally removed in favor of `C_UnitAuras`
+  - [11_API_Migration_Guide.md](11_API_Migration_Guide.md) expanded from ~630 to ~1,950 lines covering patches 11.0.2 through 12.0.1
+  - New systems: `C_DamageMeter` official damage meter, `C_EncounterTimeline` / `C_EncounterWarnings` boss timeline system, `C_Housing` player housing, `C_EncodingUtil` native compression/serialization
+  - Cleanup: removed obsolete `api_extracted/` (513 raw 11.x API files), `events_extracted/` (1,645 events from 11.2.7), and `file_lists/` directories — all content now lives in the curated guide files
+
+- **v1.1 (2025-10-19)**
+
+  - Added [12_API_Migration_Guide.md](12_API_Migration_Guide.md) — comprehensive guide for addon version migration covering where to find API changes (warcraft.wiki.gg, WoW Forums, GitHub UI source, CurseForge/Wago), major API changes by expansion (The War Within, Dragonflight, Shadowlands), common migration patterns (single function → namespace, multi-return → table, compatibility wrappers, version-specific blocks, safe wrappers), version/client detection, automated migration checklists, real-world case studies (ArchyShadowlands 10.0 → 11.0), and a quick-reference table of API changes
+  - Expanded the KB to 12 guides and integrated the migration guide into the README learning path and "I want to..." section
+
+- **v1.0 (2025-10-19)**
+
+  - Initial release — 11 core guides (00-10), QUICK_START_GUIDE, README
+  - Guides: 00_MASTER_PROMPT, 01_API_Reference, 02_Event_System, 03_UI_Framework, 04_Addon_Structure, 05_Patterns_And_Best_Practices, 06_Data_Persistence, 07_Blizzard_UI_Examples, 08_Community_Addon_Patterns, 09_Addon_Libraries_Guide, 10_Advanced_Techniques
+  - Built from analysis of the WoW 11.2.7 (The War Within) UI source tree and community addon patterns
+
+<!-- CLAUDE_SKIP_END -->
