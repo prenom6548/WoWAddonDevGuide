@@ -396,9 +396,6 @@ All examples in this knowledge base reference:
 - [CurseForge](https://www.curseforge.com/wow/addons) — largest addon distribution platform; useful for downloading popular addons to study real-world patterns.
 - [Wago.io](https://addons.wago.io/) — addon/WeakAuras hosting.
 
-<!-- CLAUDE_SKIP_END -->
-
-<!-- CLAUDE_SKIP_START -->
 ## Version History
 
 - **v3.3 (2026-04-22)**
