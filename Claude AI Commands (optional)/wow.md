@@ -121,7 +121,7 @@ When reviewing addons with multiple files:
 - **Debug Output**: NEVER output debug info to chat frames. ALWAYS create a scrollable, copy-pasteable window (EditBox with multi-line support) so users can easily select and copy debug output for reporting issues
 - **When researching**: Check Blizzard UI Source (see User Configuration at top of file) for official implementation examples
 - **Markdown files**: When creating/editing .md files, ALWAYS use clickable markdown links for cross-file refs (`[file.md](file.md)`) and intra-file section refs (`[Section](#section)`). Backtick filenames should only be used when referencing a path to a file that could change depending on the system.
-- **After substantive guide changes**: Always check and update these index files as needed: README.md, QUICK_START_GUIDE.md, KNOWLEDGE_BASE_UPDATE_LOG.md, 00_MASTER_PROMPT.md
+- **After substantive guide changes**: Always check and update these index files as needed: README.md, 00_MASTER_GUIDE.md
 
 ## Workflow
 
